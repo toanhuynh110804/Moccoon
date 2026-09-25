@@ -342,14 +342,14 @@ exports.cancelOrder = async (req, res) => {
 // 5. Admin: Quản lý danh sách đơn hàng (lọc theo trạng thái, tìm kiếm mã đơn / SĐT)
 exports.getAdminOrders = async (req, res) => {
     try {
-        const { status, search, page = 1, limit = 20 } = req.query;
+        const { status, search, page = 1, limit = 50 } = req.query;
         const offset = (parseInt(page) - 1) * parseInt(limit);
 
         const pool = await getPool();
         const request = pool.request();
 
         let whereConditions = [];
-        if (status) {
+        if (status && status !== 'ALL') {
             whereConditions.push('o.order_status = @status');
             request.input('status', sql.NVarChar, status);
         }
@@ -366,9 +366,17 @@ exports.getAdminOrders = async (req, res) => {
                 o.*,
                 u.full_name AS customer_name,
                 u.email AS customer_email,
-                (SELECT COUNT(*) FROM OrderItems oi WHERE oi.order_id = o.id) AS total_items
+                (SELECT COUNT(*) FROM OrderItems oi WHERE oi.order_id = o.id) AS total_items,
+                (
+                    SELECT 
+                        oi.id, oi.product_id, oi.product_name, oi.product_image, 
+                        oi.price, oi.quantity, oi.total_price
+                    FROM OrderItems oi 
+                    WHERE oi.order_id = o.id
+                    FOR JSON PATH
+                ) AS items_json
             FROM Orders o
-            INNER JOIN Users u ON o.user_id = u.id
+            LEFT JOIN Users u ON o.user_id = u.id
             ${whereClause}
             ORDER BY o.created_at DESC
             OFFSET @offset ROWS FETCH NEXT @limit ROWS ONLY;
@@ -381,11 +389,16 @@ exports.getAdminOrders = async (req, res) => {
 
         const result = await request.query(query);
 
+        const orders = result.recordsets[0].map(order => ({
+            ...order,
+            items: order.items_json ? JSON.parse(order.items_json) : []
+        }));
+
         return res.status(200).json({
             success: true,
             data: {
-                orders: result.recordsets[0],
-                total: result.recordsets[1][0].total,
+                orders: orders,
+                total: result.recordsets[1][0]?.total || orders.length,
                 page: parseInt(page),
                 limit: parseInt(limit)
             }

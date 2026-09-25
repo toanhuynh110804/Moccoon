@@ -1,15 +1,10 @@
 const { getPool, sql } = require('../config/db');
 
-// Lấy danh sách danh mục
+// Lấy danh sách danh mục (chỉ lấy danh mục đang hoạt động)
 exports.getCategories = async (req, res) => {
     try {
         const pool = await getPool();
-        const isAdmin = req.query.all === 'true';
-        let query = 'SELECT * FROM Categories';
-        if (!isAdmin) {
-            query += ' WHERE is_active = 1';
-        }
-        query += ' ORDER BY sort_order ASC, id ASC';
+        const query = 'SELECT * FROM Categories WHERE is_active = 1 ORDER BY sort_order ASC, id ASC';
 
         const result = await pool.request().query(query);
         return res.status(200).json({
@@ -104,29 +99,61 @@ exports.deleteCategory = async (req, res) => {
         const { id } = req.params;
         const pool = await getPool();
 
-        // Kiểm tra xem danh mục có sản phẩm không
-        const checkProducts = await pool.request()
+        // 1. Kiểm tra danh mục có tồn tại không
+        const checkCat = await pool.request()
             .input('id', sql.Int, id)
-            .query('SELECT COUNT(*) AS total FROM Products WHERE category_id = @id');
-
-        if (checkProducts.recordset[0].total > 0) {
-            // Chuyển sang ẩn danh mục thay vì xóa cứng
-            await pool.request()
-                .input('id', sql.Int, id)
-                .query('UPDATE Categories SET is_active = 0 WHERE id = @id');
-            return res.status(200).json({
-                success: true,
-                message: 'Danh mục đang có sản phẩm liên kết nên đã được chuyển sang trạng thái tạm ngưng.'
-            });
+            .query('SELECT * FROM Categories WHERE id = @id');
+        if (checkCat.recordset.length === 0) {
+            return res.status(404).json({ success: false, message: 'Danh mục không tồn tại hoặc đã bị xóa.' });
         }
 
+        // 2. Tìm danh mục thay thế hợp lệ khác đang hoạt động
+        const altCatRes = await pool.request()
+            .input('id', sql.Int, id)
+            .query('SELECT TOP 1 id, name FROM Categories WHERE id != @id AND is_active = 1 ORDER BY sort_order ASC, id ASC');
+
+        let targetCatId = null;
+        let targetCatName = '';
+
+        if (altCatRes.recordset.length > 0) {
+            targetCatId = altCatRes.recordset[0].id;
+            targetCatName = altCatRes.recordset[0].name;
+        } else {
+            // Nếu không còn danh mục nào khác, tự động tạo 1 danh mục "Sản phẩm chung"
+            const createDefaultCat = await pool.request()
+                .input('name', sql.NVarChar, 'Sản phẩm chung')
+                .input('slug', sql.VarChar, 'san-pham-chung')
+                .input('desc', sql.NVarChar, 'Danh mục mặc định')
+                .query(`
+                    INSERT INTO Categories (name, slug, description, sort_order, is_active)
+                    OUTPUT INSERTED.id, INSERTED.name
+                    VALUES (@name, @slug, @desc, 1, 1)
+                `);
+            targetCatId = createDefaultCat.recordset[0].id;
+            targetCatName = createDefaultCat.recordset[0].name;
+        }
+
+        // 3. Chuyển toàn bộ sản phẩm đang thuộc danh mục bị xóa sang danh mục thay thế
+        const updateProds = await pool.request()
+            .input('id', sql.Int, id)
+            .input('targetId', sql.Int, targetCatId)
+            .query('UPDATE Products SET category_id = @targetId WHERE category_id = @id');
+
+        const reassignedCount = updateProds.rowsAffected[0] || 0;
+
+        // 4. Xóa vĩnh viễn danh mục khỏi CSDL
         await pool.request()
             .input('id', sql.Int, id)
             .query('DELETE FROM Categories WHERE id = @id');
 
+        let successMsg = 'Đã xóa vĩnh viễn danh mục thành công!';
+        if (reassignedCount > 0) {
+            successMsg += ` Đã chuyển ${reassignedCount} sản phẩm liên quan sang danh mục "${targetCatName}".`;
+        }
+
         return res.status(200).json({
             success: true,
-            message: 'Đã xóa danh mục thành công!'
+            message: successMsg
         });
     } catch (error) {
         console.error('deleteCategory error:', error);

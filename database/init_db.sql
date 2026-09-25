@@ -44,8 +44,8 @@ BEGIN
     CREATE TABLE dbo.Users (
         id INT IDENTITY(1,1) PRIMARY KEY,
         full_name NVARCHAR(100) NOT NULL,
-        email NVARCHAR(100) NULL UNIQUE,
-        phone NVARCHAR(20) NULL UNIQUE,
+        email NVARCHAR(100) NULL,
+        phone NVARCHAR(20) NULL,
         password_hash NVARCHAR(255) NOT NULL,
         role NVARCHAR(20) NOT NULL DEFAULT 'CUSTOMER', -- 'CUSTOMER', 'ADMIN', 'STAFF'
         avatar_url NVARCHAR(500) NULL,
@@ -54,8 +54,8 @@ BEGIN
         created_at DATETIME2 NOT NULL DEFAULT GETDATE(),
         updated_at DATETIME2 NOT NULL DEFAULT GETDATE()
     );
-    CREATE INDEX IX_Users_Email ON dbo.Users(email);
-    CREATE INDEX IX_Users_Phone ON dbo.Users(phone);
+    CREATE UNIQUE NONCLUSTERED INDEX UX_Users_Email_NotNull ON dbo.Users(email) WHERE email IS NOT NULL;
+    CREATE UNIQUE NONCLUSTERED INDEX UX_Users_Phone_NotNull ON dbo.Users(phone) WHERE phone IS NOT NULL;
     PRINT N'Đã tạo bảng Users';
 END
 GO
@@ -236,6 +236,7 @@ BEGIN
         sender_type VARCHAR(10) NOT NULL, -- 'CUSTOMER' hoặc 'ADMIN'
         message_text NVARCHAR(MAX) NOT NULL,
         image_url NVARCHAR(500) NULL,
+        video_url NVARCHAR(500) NULL,
         is_read BIT NOT NULL DEFAULT 0,
         created_at DATETIME2 NOT NULL DEFAULT GETDATE()
     );
@@ -259,6 +260,28 @@ BEGIN
     );
     CREATE INDEX IX_Notifications_UserId ON dbo.Notifications(user_id);
     PRINT N'Đã tạo bảng Notifications';
+END
+GO
+
+-- 13. Bảng ProductReviews (Đánh giá, bình luận và ảnh review từ khách hàng)
+IF OBJECT_ID('dbo.ProductReviews', 'U') IS NULL
+BEGIN
+    CREATE TABLE dbo.ProductReviews (
+        id INT IDENTITY(1,1) PRIMARY KEY,
+        product_id INT NOT NULL FOREIGN KEY REFERENCES dbo.Products(id) ON DELETE CASCADE,
+        user_id INT NOT NULL FOREIGN KEY REFERENCES dbo.Users(id) ON DELETE CASCADE,
+        rating INT NOT NULL CHECK (rating >= 1 AND rating <= 5),
+        comment NVARCHAR(MAX) NOT NULL,
+        image_url NVARCHAR(500) NULL,
+        is_anonymous BIT NOT NULL DEFAULT 0,
+        is_active BIT NOT NULL DEFAULT 1,
+        created_at DATETIME2 NOT NULL DEFAULT GETDATE(),
+        updated_at DATETIME2 NOT NULL DEFAULT GETDATE()
+    );
+    CREATE INDEX IX_ProductReviews_ProductId ON dbo.ProductReviews(product_id);
+    CREATE INDEX IX_ProductReviews_UserId ON dbo.ProductReviews(user_id);
+    CREATE UNIQUE NONCLUSTERED INDEX UX_ProductReviews_Product_User ON dbo.ProductReviews(product_id, user_id) WHERE is_active = 1;
+    PRINT N'Đã tạo bảng ProductReviews';
 END
 GO
 

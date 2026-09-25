@@ -19,17 +19,18 @@ const storage = multer.diskStorage({
 });
 
 const fileFilter = (req, file, cb) => {
-    const allowedMimes = ['image/jpeg', 'image/png', 'image/webp', 'image/gif'];
-    if (allowedMimes.includes(file.mimetype)) {
+    const isImage = file.mimetype.startsWith('image/');
+    const isVideo = file.mimetype.startsWith('video/') || file.mimetype === 'application/octet-stream';
+    if (isImage || isVideo) {
         cb(null, true);
     } else {
-        cb(new Error('Chỉ chấp nhận các định dạng ảnh: JPG, PNG, WEBP, GIF'), false);
+        cb(new Error('Chỉ chấp nhận các định dạng file hình ảnh hoặc video.'), false);
     }
 };
 
 const upload = multer({
     storage: storage,
-    limits: { fileSize: 5 * 1024 * 1024 }, // 5MB
+    limits: { fileSize: 50 * 1024 * 1024 }, // 50MB hỗ trợ video
     fileFilter: fileFilter
 });
 

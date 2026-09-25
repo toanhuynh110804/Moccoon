@@ -72,7 +72,7 @@ exports.getMessages = async (req, res) => {
         const query = `
             SELECT 
                 cm.id, cm.conversation_id, cm.sender_id, cm.sender_type,
-                cm.message_text, cm.image_url, cm.is_read, cm.created_at,
+                cm.message_text, cm.image_url, cm.video_url, cm.is_read, cm.created_at,
                 u.full_name AS sender_name, u.avatar_url AS sender_avatar
             FROM ChatMessages cm
             INNER JOIN Users u ON cm.sender_id = u.id
@@ -110,26 +110,29 @@ exports.sendMessage = async (req, res) => {
     try {
         const senderId = req.user.id;
         const senderType = req.user.role === 'ADMIN' ? 'ADMIN' : 'CUSTOMER';
-        const { conversation_id, message_text, image_url } = req.body;
+        const { conversation_id, message_text, image_url, video_url } = req.body;
 
-        if (!conversation_id || (!message_text && !image_url)) {
-            return res.status(400).json({ success: false, message: 'Vui lòng cung cấp nội dung tin nhắn hoặc hình ảnh.' });
+        if (!conversation_id || (!message_text && !image_url && !video_url)) {
+            return res.status(400).json({ success: false, message: 'Vui lòng cung cấp nội dung tin nhắn, hình ảnh hoặc video.' });
         }
 
         const pool = await getPool();
 
         const insertMsgQuery = `
-            INSERT INTO ChatMessages (conversation_id, sender_id, sender_type, message_text, image_url, is_read)
+            INSERT INTO ChatMessages (conversation_id, sender_id, sender_type, message_text, image_url, video_url, is_read)
             OUTPUT INSERTED.*
-            VALUES (@conversation_id, @senderId, @senderType, @message_text, @image_url, 0)
+            VALUES (@conversation_id, @senderId, @senderType, @message_text, @image_url, @video_url, 0)
         `;
+
+        const finalMsgText = message_text || (image_url ? '[Hình ảnh]' : (video_url ? '[Video clip]' : ''));
 
         const msgResult = await pool.request()
             .input('conversation_id', sql.Int, conversation_id)
             .input('senderId', sql.Int, senderId)
             .input('senderType', sql.VarChar, senderType)
-            .input('message_text', sql.NVarChar, message_text || (image_url ? '[Hình ảnh]' : ''))
+            .input('message_text', sql.NVarChar, finalMsgText)
             .input('image_url', sql.NVarChar, image_url || null)
+            .input('video_url', sql.NVarChar, video_url || null)
             .query(insertMsgQuery);
 
         const newMsg = msgResult.recordset[0];
@@ -148,7 +151,7 @@ exports.sendMessage = async (req, res) => {
 
         await pool.request()
             .input('conversation_id', sql.Int, conversation_id)
-            .input('last_message', sql.NVarChar, message_text || '[Hình ảnh]')
+            .input('last_message', sql.NVarChar, finalMsgText)
             .input('senderType', sql.VarChar, senderType)
             .query(updateConvQuery);
 

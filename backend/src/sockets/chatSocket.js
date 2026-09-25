@@ -51,18 +51,18 @@ function setupChatSocket(io) {
             socket.leave(room);
         });
 
-        // Gửi tin nhắn tư vấn trong cuộc hội thoại
+        // Gửi tin nhắn tư vấn trong cuộc hội thoại (Hỗ trợ text, image_url, video_url)
         socket.on('send_message', async (data, callback) => {
             try {
-                const { conversation_id, message_text, image_url } = data;
-                if (!conversation_id || (!message_text && !image_url)) {
+                const { conversation_id, message_text, image_url, video_url } = data;
+                if (!conversation_id || (!message_text && !image_url && !video_url)) {
                     if (callback) callback({ success: false, message: 'Nội dung tin nhắn không hợp lệ' });
                     return;
                 }
 
                 const senderId = socket.user.id;
                 const senderType = socket.user.role === 'ADMIN' ? 'ADMIN' : 'CUSTOMER';
-                const text = message_text || (image_url ? '[Hình ảnh]' : '');
+                const text = message_text || (image_url ? '[Hình ảnh]' : (video_url ? '[Video clip]' : ''));
 
                 const pool = await getPool();
 
@@ -73,10 +73,11 @@ function setupChatSocket(io) {
                     .input('senderType', sql.VarChar, senderType)
                     .input('text', sql.NVarChar, text)
                     .input('image', sql.NVarChar, image_url || null)
+                    .input('video', sql.NVarChar, video_url || null)
                     .query(`
-                        INSERT INTO ChatMessages (conversation_id, sender_id, sender_type, message_text, image_url, is_read)
+                        INSERT INTO ChatMessages (conversation_id, sender_id, sender_type, message_text, image_url, video_url, is_read)
                         OUTPUT INSERTED.*
-                        VALUES (@convId, @senderId, @senderType, @text, @image, 0)
+                        VALUES (@convId, @senderId, @senderType, @text, @image, @video, 0)
                     `);
 
                 const savedMsg = insertMsg.recordset[0];
@@ -101,63 +102,72 @@ function setupChatSocket(io) {
                 // Bắn tin nhắn đến tất cả thành viên trong phòng trò chuyện
                 io.to(room).emit('receive_message', savedMsg);
 
-                // Nếu khách nhắn, bắn thông báo đến kênh admin và kích hoạt phản hồi tự động từ chuyên viên da liễu Moccoon
+                // Nếu khách nhắn, bắn thông báo đến kênh admin
                 if (senderType === 'CUSTOMER') {
                     io.to('admin_channel').emit('new_customer_chat', {
                         conversation_id,
                         customer_name: socket.user.full_name,
                         customer_avatar: socket.user.avatar_url,
                         last_message: text,
+                        image_url: image_url || null,
+                        video_url: video_url || null,
                         created_at: savedMsg.created_at
                     });
 
-                    // Tự động phản hồi tư vấn chuẩn y khoa sau 1.2s
-                    setTimeout(async () => {
-                        try {
-                            const lower = text.toLowerCase();
-                            let replyText = "Cảm ơn bạn đã liên hệ Moccoon Skincare! Chuyên viên luôn sẵn sàng đồng hành cùng bạn. Bạn có thể chia sẻ cụ thể hơn về tình trạng da (da dầu, khô hay hỗn hợp) để mình tư vấn chu trình phù hợp nhất nhé!";
-                            
-                            if (lower.includes('mụn') || lower.includes('dầu') || lower.includes('nhờn')) {
-                                replyText = "Chào bạn! Với tình trạng da dầu mụn, bạn nên dùng **Nước tẩy trang Moccoon Micellar** để làm sạch cặn dầu bã nhờn sâu trong lỗ chân lông, sau đó dùng **Sữa rửa mặt pH 5.5** chứa chiết xuất tràm trà và rau má để kháng viêm, gom cồi mụn mà không gây căng rát nhé!";
-                            } else if (lower.includes('nhạy cảm') || lower.includes('kích ứng') || lower.includes('đỏ')) {
-                                replyText = "Làn da nhạy cảm rất an tâm khi sử dụng sản phẩm Moccoon vì toàn bộ đều đạt tiêu chuẩn thuần chay 100% không cồn, không paraben, không hương liệu tổng hợp. Bạn nên rửa mặt nhẹ nhàng và cấp ẩm ngay sau khi rửa nhé!";
-                            } else if (lower.includes('thứ tự') || lower.includes('3 bước') || lower.includes('cách dùng') || lower.includes('sử dụng')) {
-                                replyText = "Quy trình làm sạch chuẩn 3 bước Moccoon:\n🌿 Bước 1: Nước tẩy trang (loại bỏ bụi mịn PM2.5, bã nhờn).\n🌿 Bước 2: Sữa rửa mặt dịu nhẹ pH 5.5 cân bằng màng sinh học da.\n🌿 Bước 3: Tẩy tế bào chết gel sinh học (sử dụng 1-2 lần/tuần vào buổi tối sau bước rửa mặt).";
-                            } else if (lower.includes('combo') || lower.includes('giá') || lower.includes('khuyến mãi') || lower.includes('ưu đãi')) {
-                                replyText = "Moccoon hiện đang có chương trình ưu đãi đặc biệt: **Combo Trọn Bộ 3 Bước Làm Sạch Chuyên Sâu** giảm ngay 25%, từ 760.000đ chỉ còn 580.000đ và được Miễn Phí Vận Chuyển toàn quốc! Bạn có thể đặt ngay trong mục Cửa hàng nhé!";
+                    // CHỈ tự động trả lời mở đầu cho đúng 2 câu hỏi gợi ý:
+                    // 1. "Khiếu nại / thắc mắc?"
+                    // 2. "Tư vấn sản phẩm?"
+                    // Mọi câu hỏi và tin nhắn khác để Admin trả lời trực tiếp!
+                    const trimmedText = text.trim().toLowerCase();
+                    const isComplaintPrompt = trimmedText === 'khiếu nại / thắc mắc?' || 
+                                              trimmedText === 'khiếu nại / thắc mắc' || 
+                                              trimmedText.includes('khiếu nại') || 
+                                              trimmedText.includes('thắc mắc');
+                    const isConsultPrompt = trimmedText === 'tư vấn sản phẩm?' || 
+                                            trimmedText === 'tư vấn sản phẩm';
+
+                    if (isComplaintPrompt || isConsultPrompt) {
+                        setTimeout(async () => {
+                            try {
+                                let replyText = "";
+                                if (isComplaintPrompt) {
+                                    replyText = "Dạ Moccoon xin chào bạn! Rất tiếc vì trải nghiệm chưa trọn vẹn của bạn. Bạn vui lòng nhắn Mã đơn hàng hoặc nêu rõ vấn đề đang gặp phải (đổi trả, hàng giao trễ, cần bảo hành...), Chuyên viên quản lý Moccoon sẽ liên hệ trực tiếp để hỗ trợ bạn ngay trong ít phút ạ!";
+                                } else {
+                                    replyText = "Chào bạn! Moccoon mang đến giải pháp làm sạch thuần chay chuẩn y khoa 100%:\n🌿 1. Nước tẩy trang Micellar (Làm sạch sâu bụi mịn & bã nhờn)\n🌿 2. Sữa rửa mặt dịu nhẹ pH 5.5 Bí đao & Tràm trà (Kháng viêm, gom mụn)\n🌿 3. Gel tẩy tế bào chết sinh học\nBạn có thể chia sẻ tình trạng da của mình để chuyên viên tư vấn chi tiết cho bạn nhé!";
+                                }
+
+                                const adminReply = await pool.request()
+                                    .input('convId', sql.Int, conversation_id)
+                                    .input('senderId', sql.Int, 1) // Admin user ID
+                                    .input('senderType', sql.VarChar, 'ADMIN')
+                                    .input('text', sql.NVarChar, replyText)
+                                    .query(`
+                                        INSERT INTO ChatMessages (conversation_id, sender_id, sender_type, message_text, is_read)
+                                        OUTPUT INSERTED.*
+                                        VALUES (@convId, @senderId, @senderType, @text, 0)
+                                    `);
+
+                                const botMsg = adminReply.recordset[0];
+                                botMsg.sender_name = "Chuyên Viên Da Liễu Moccoon";
+                                botMsg.sender_avatar = "/uploads/logo_moccoon.png";
+
+                                await pool.request()
+                                    .input('convId', sql.Int, conversation_id)
+                                    .input('lastMsg', sql.NVarChar, replyText)
+                                    .query(`
+                                        UPDATE ChatConversations
+                                        SET last_message = @lastMsg,
+                                            last_message_at = GETDATE(),
+                                            unread_customer_count = unread_customer_count + 1
+                                        WHERE id = @convId
+                                    `);
+
+                                io.to(room).emit('receive_message', botMsg);
+                            } catch (botErr) {
+                                console.error('[Bot Reply Error]:', botErr);
                             }
-
-                            const adminReply = await pool.request()
-                                .input('convId', sql.Int, conversation_id)
-                                .input('senderId', sql.Int, 1) // Admin user ID
-                                .input('senderType', sql.VarChar, 'ADMIN')
-                                .input('text', sql.NVarChar, replyText)
-                                .query(`
-                                    INSERT INTO ChatMessages (conversation_id, sender_id, sender_type, message_text, is_read)
-                                    OUTPUT INSERTED.*
-                                    VALUES (@convId, @senderId, @senderType, @text, 0)
-                                `);
-
-                            const botMsg = adminReply.recordset[0];
-                            botMsg.sender_name = "Chuyên Viên Da Liễu Moccoon";
-                            botMsg.sender_avatar = "/uploads/logo_moccoon.png";
-
-                            await pool.request()
-                                .input('convId', sql.Int, conversation_id)
-                                .input('lastMsg', sql.NVarChar, replyText)
-                                .query(`
-                                    UPDATE ChatConversations
-                                    SET last_message = @lastMsg,
-                                        last_message_at = GETDATE(),
-                                        unread_customer_count = unread_customer_count + 1
-                                    WHERE id = @convId
-                                `);
-
-                            io.to(room).emit('receive_message', botMsg);
-                        } catch (botErr) {
-                            console.error('[Bot Reply Error]:', botErr);
-                        }
-                    }, 1200);
+                        }, 1000);
+                    }
                 }
 
                 if (callback) callback({ success: true, data: savedMsg });

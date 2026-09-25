@@ -101,6 +101,9 @@ const chatRoutes = require('./routes/chatRoutes');
 const adminRoutes = require('./routes/adminRoutes');
 const notificationRoutes = require('./routes/notificationRoutes');
 const uploadRoutes = require('./routes/uploadRoutes');
+const reviewRoutes = require('./routes/reviewRoutes');
+const favoriteRoutes = require('./routes/favoriteRoutes');
+const addressRoutes = require('./routes/addressRoutes');
 
 // Gắn các Routes vào App
 app.use('/api/auth', authRoutes);
@@ -113,6 +116,9 @@ app.use('/api/chat', chatRoutes);
 app.use('/api/admin', adminRoutes);
 app.use('/api/notifications', notificationRoutes);
 app.use('/api/upload', uploadRoutes);
+app.use('/api/reviews', reviewRoutes);
+app.use('/api/favorites', favoriteRoutes);
+app.use('/api/addresses', addressRoutes);
 
 // Khởi chạy Android Studio từ giao diện web
 app.post('/api/system/open-studio', (req, res) => {

@@ -356,15 +356,65 @@ exports.deleteProduct = async (req, res) => {
         const { id } = req.params;
         const pool = await getPool();
 
-        // Ẩn sản phẩm thay vì xóa cứng để không ảnh hưởng dữ liệu lịch sử đơn hàng
-        await pool.request()
+        // Kiểm tra sản phẩm có tồn tại không
+        const checkProd = await pool.request()
             .input('id', sql.Int, id)
-            .query('UPDATE Products SET is_active = 0, updated_at = GETDATE() WHERE id = @id');
+            .query('SELECT id, name FROM Products WHERE id = @id');
 
-        return res.status(200).json({
-            success: true,
-            message: 'Sản phẩm đã được gỡ khỏi danh sách hiển thị.'
-        });
+        if (checkProd.recordset.length === 0) {
+            return res.status(404).json({ success: false, message: 'Không tìm thấy sản phẩm cần xóa.' });
+        }
+
+        const productName = checkProd.recordset[0].name;
+
+        // Kiểm tra xem sản phẩm đã từng phát sinh trong đơn hàng của khách chưa
+        const checkOrders = await pool.request()
+            .input('id', sql.Int, id)
+            .query('SELECT COUNT(*) AS order_count FROM OrderItems WHERE product_id = @id');
+
+        const orderCount = checkOrders.recordset[0]?.order_count || 0;
+
+        if (orderCount === 0) {
+            // Sản phẩm chưa từng có đơn hàng -> Xóa sạch hoàn toàn khỏi CSDL
+            const transaction = new sql.Transaction(pool);
+            await transaction.begin();
+            try {
+                const reqTrans = new sql.Request(transaction);
+                reqTrans.input('id', sql.Int, id);
+
+                await reqTrans.query(`
+                    DELETE FROM Favorites WHERE product_id = @id;
+                    DELETE FROM CartItems WHERE product_id = @id;
+                    DELETE FROM ProductImages WHERE product_id = @id;
+                    DELETE FROM ProductReviews WHERE product_id = @id;
+                    DELETE FROM Products WHERE id = @id;
+                `);
+
+                await transaction.commit();
+
+                return res.status(200).json({
+                    success: true,
+                    message: `Đã xóa vĩnh viễn sản phẩm "${productName}" khỏi hệ thống thành công!`
+                });
+            } catch (tErr) {
+                await transaction.rollback();
+                throw tErr;
+            }
+        } else {
+            // Sản phẩm đã có đơn hàng -> Gỡ khỏi giỏ hàng/yêu thích và ẩn vĩnh viễn để bảo toàn lịch sử hóa đơn
+            await pool.request()
+                .input('id', sql.Int, id)
+                .query(`
+                    DELETE FROM CartItems WHERE product_id = @id;
+                    DELETE FROM Favorites WHERE product_id = @id;
+                    UPDATE Products SET is_active = 0, stock_quantity = 0, updated_at = GETDATE() WHERE id = @id;
+                `);
+
+            return res.status(200).json({
+                success: true,
+                message: `Sản phẩm "${productName}" đã phát sinh trong đơn hàng của khách nên đã được xóa và ẩn khỏi toàn bộ cửa hàng để lưu vết lịch sử đơn hàng.`
+            });
+        }
     } catch (error) {
         console.error('deleteProduct error:', error);
         return res.status(500).json({ success: false, message: 'Lỗi khi xóa sản phẩm.', error: error.message });
