@@ -1078,27 +1078,30 @@
 
                     <!-- REGISTER FORM -->
                     <form id="registerForm" class="auth-form" style="display: none;" onsubmit="handleRegisterSubmit(event)">
+                        <div style="font-size: 11.5px; color: var(--text-secondary); background: var(--surface-variant); border-left: 3px solid var(--accent); padding: 8px 12px; border-radius: 6px; margin-bottom: 6px; line-height: 1.4;">
+                            🌿 <strong>Tài khoản Khách Hàng:</strong> Đăng ký để mua sắm mỹ phẩm thuần chay &amp; nhận tư vấn da liễu. Quản trị viên (Admin) là tài khoản mặc định của hệ thống.
+                        </div>
                         <div class="auth-field">
                             <label>Họ và tên</label>
                             <input type="text" id="regFullName" class="auth-input" placeholder="Ví dụ: Nguyễn Thị Mai Linh" required>
                         </div>
                         <div class="auth-field">
                             <label>Email</label>
-                            <input type="email" id="regEmail" class="auth-input" placeholder="email@gmail.com" required>
+                            <input type="email" id="regEmail" class="auth-input" placeholder="email@gmail.com">
                         </div>
                         <div class="auth-field">
                             <label>Số điện thoại</label>
-                            <input type="tel" id="regPhone" class="auth-input" placeholder="0912345678" required>
+                            <input type="tel" id="regPhone" class="auth-input" placeholder="0912345678">
                         </div>
                         <div class="auth-field">
                             <label>Địa chỉ nhận hàng</label>
                             <input type="text" id="regAddress" class="auth-input" placeholder="Số nhà, đường, quận/huyện...">
                         </div>
                         <div class="auth-field">
-                            <label>Mật khẩu</label>
-                            <input type="password" id="regPassword" class="auth-input" placeholder="Tạo mật khẩu..." required>
+                            <label>Mật khẩu (Tối thiểu 6 ký tự)</label>
+                            <input type="password" id="regPassword" class="auth-input" placeholder="Tạo mật khẩu..." required minlength="6">
                         </div>
-                        <button type="submit" class="btn-auth-submit">Đăng Ký Tài Khoản</button>
+                        <button type="submit" class="btn-auth-submit">Đăng Ký Tài Khoản Khách Hàng</button>
                     </form>
 
                     <!-- Quick Testing Buttons -->
@@ -1773,6 +1776,61 @@
         } catch (err) {
             console.error(err);
             alert('Lỗi kết nối máy chủ SQL Server!');
+        }
+    }
+
+    async function handleRegisterSubmit(e) {
+        e.preventDefault();
+        const full_name = document.getElementById('regFullName').value.trim();
+        const email = document.getElementById('regEmail').value.trim();
+        const phone = document.getElementById('regPhone').value.trim();
+        const address = document.getElementById('regAddress').value.trim();
+        const password = document.getElementById('regPassword').value;
+
+        if (!full_name || !password || (!email && !phone)) {
+            alert('Vui lòng điền họ tên, mật khẩu và ít nhất email hoặc số điện thoại.');
+            return;
+        }
+
+        if (password.length < 6) {
+            alert('Mật khẩu phải có độ dài ít nhất 6 ký tự.');
+            return;
+        }
+
+        try {
+            showToast('Đang tạo tài khoản khách hàng...');
+            const res = await fetch('/api/auth/register', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    full_name,
+                    email,
+                    phone,
+                    address,
+                    password
+                })
+            });
+            const data = await res.json();
+
+            if (data.success) {
+                currentToken = data.data.token;
+                currentUser = data.data.user;
+                localStorage.setItem('moccoon_token', currentToken);
+                localStorage.setItem('moccoon_user', JSON.stringify(currentUser));
+
+                // Điền sẵn thông tin vào form login để người dùng đăng nhập lại dễ dàng
+                document.getElementById('loginAccount').value = email || phone;
+                document.getElementById('loginPassword').value = password;
+
+                showToast('🎉 Đăng ký tài khoản thành công!');
+                alert(`🎉 CHÚC MỪNG!\nBạn đã tạo tài khoản Khách hàng Moccoon thành công!\n\nTài khoản đăng nhập: ${email || phone}\nMật khẩu: ${password}\n\nHệ thống sẽ tự động đưa bạn vào Cửa Hàng.`);
+                applyRoleNavigation();
+            } else {
+                alert('Đăng ký không thành công: ' + (data.message || 'Lỗi đăng ký'));
+            }
+        } catch (err) {
+            console.error('handleRegisterSubmit error:', err);
+            alert('Lỗi kết nối máy chủ SQL Server khi đăng ký!');
         }
     }
 

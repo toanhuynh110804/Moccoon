@@ -10,19 +10,25 @@ function generateToken(user) {
     );
 }
 
-// 1. Đăng ký tài khoản khách hàng mới
+// 1. Đăng ký tài khoản khách hàng mới (Chỉ cho phép tạo role = 'CUSTOMER')
 exports.register = async (req, res) => {
     try {
         const { full_name, email, phone, password, address } = req.body;
 
-        if (!full_name || !password || (!email && !phone)) {
+        const cleanFullName = full_name ? String(full_name).trim() : '';
+        const cleanEmail = email && String(email).trim() ? String(email).trim().toLowerCase() : null;
+        const cleanPhone = phone && String(phone).trim() ? String(phone).trim().replace(/\s+/g, '') : null;
+        const cleanPassword = password ? String(password).trim() : '';
+        const cleanAddress = address && String(address).trim() ? String(address).trim() : null;
+
+        if (!cleanFullName || !cleanPassword || (!cleanEmail && !cleanPhone)) {
             return res.status(400).json({
                 success: false,
                 message: 'Vui lòng cung cấp họ tên, mật khẩu và ít nhất email hoặc số điện thoại.'
             });
         }
 
-        if (password.length < 6) {
+        if (cleanPassword.length < 6) {
             return res.status(400).json({
                 success: false,
                 message: 'Mật khẩu phải có độ dài ít nhất 6 ký tự.'
@@ -34,12 +40,12 @@ exports.register = async (req, res) => {
         // Kiểm tra xem email hoặc phone đã tồn tại chưa
         const checkQuery = `
             SELECT id FROM Users 
-            WHERE (@email IS NOT NULL AND email = @email) 
-               OR (@phone IS NOT NULL AND phone = @phone)
+            WHERE (@email IS NOT NULL AND LOWER(email) = LOWER(@email)) 
+               OR (@phone IS NOT NULL AND (phone = @phone OR REPLACE(phone, ' ', '') = @phone))
         `;
         const checkResult = await pool.request()
-            .input('email', sql.NVarChar, email || null)
-            .input('phone', sql.NVarChar, phone || null)
+            .input('email', sql.NVarChar, cleanEmail)
+            .input('phone', sql.NVarChar, cleanPhone)
             .query(checkQuery);
 
         if (checkResult.recordset.length > 0) {
@@ -51,33 +57,33 @@ exports.register = async (req, res) => {
 
         // Mã hóa mật khẩu
         const salt = await bcrypt.genSalt(10);
-        const passwordHash = await bcrypt.hash(password, salt);
+        const passwordHash = await bcrypt.hash(cleanPassword, salt);
 
-        // Lưu tài khoản (Luôn cố định role là CUSTOMER để bảo mật)
+        // Lưu tài khoản: BẮT BUỘC role luôn là CUSTOMER. Quản trị viên (ADMIN) là tài khoản mặc định cố định.
         const insertQuery = `
             INSERT INTO Users (full_name, email, phone, password_hash, role, address, is_active)
             OUTPUT INSERTED.id, INSERTED.full_name, INSERTED.email, INSERTED.phone, INSERTED.role, INSERTED.address, INSERTED.created_at
             VALUES (@full_name, @email, @phone, @password_hash, 'CUSTOMER', @address, 1)
         `;
         const insertResult = await pool.request()
-            .input('full_name', sql.NVarChar, full_name)
-            .input('email', sql.NVarChar, email || null)
-            .input('phone', sql.NVarChar, phone || null)
+            .input('full_name', sql.NVarChar, cleanFullName)
+            .input('email', sql.NVarChar, cleanEmail)
+            .input('phone', sql.NVarChar, cleanPhone)
             .input('password_hash', sql.NVarChar, passwordHash)
-            .input('address', sql.NVarChar, address || null)
+            .input('address', sql.NVarChar, cleanAddress)
             .query(insertQuery);
 
         const newUser = insertResult.recordset[0];
         const token = generateToken(newUser);
 
-        // Tạo giỏ hàng tự động cho khách hàng
+        // Tạo giỏ hàng tự động cho khách hàng mới
         await pool.request()
             .input('userId', sql.Int, newUser.id)
             .query('IF NOT EXISTS (SELECT 1 FROM Carts WHERE user_id = @userId) INSERT INTO Carts (user_id) VALUES (@userId)');
 
         return res.status(201).json({
             success: true,
-            message: 'Đăng ký tài khoản Moccoon thành công!',
+            message: 'Đăng ký tài khoản khách hàng thành công!',
             data: {
                 token,
                 user: newUser
@@ -96,7 +102,7 @@ exports.register = async (req, res) => {
 // 2. Đăng nhập (Cho cả Khách hàng & Quản trị viên)
 exports.login = async (req, res) => {
     try {
-        const { account, password } = req.body; // account có thể là email hoặc phone
+        const { account, password } = req.body;
 
         if (!account || !password) {
             return res.status(400).json({
@@ -105,14 +111,26 @@ exports.login = async (req, res) => {
             });
         }
 
+        const cleanAccount = String(account).trim();
+        const cleanPassword = String(password).trim();
+        const isEmail = cleanAccount.includes('@');
+        const searchEmail = cleanAccount.toLowerCase();
+        const searchPhone = cleanAccount.replace(/\s+/g, '');
+
         const pool = await getPool();
         const userQuery = `
             SELECT id, full_name, email, phone, password_hash, role, avatar_url, address, is_active, created_at
             FROM Users
-            WHERE email = @account OR phone = @account
+            WHERE (@isEmail = 1 AND LOWER(email) = LOWER(@searchEmail))
+               OR (@isEmail = 0 AND (phone = @searchPhone OR REPLACE(phone, ' ', '') = @searchPhone OR LOWER(email) = LOWER(@cleanAccount)))
+               OR (LOWER(email) = LOWER(@cleanAccount))
+               OR (phone = @cleanAccount)
         `;
         const result = await pool.request()
-            .input('account', sql.NVarChar, account.trim())
+            .input('isEmail', sql.Bit, isEmail ? 1 : 0)
+            .input('searchEmail', sql.NVarChar, searchEmail)
+            .input('searchPhone', sql.NVarChar, searchPhone)
+            .input('cleanAccount', sql.NVarChar, cleanAccount)
             .query(userQuery);
 
         if (result.recordset.length === 0) {
@@ -132,8 +150,12 @@ exports.login = async (req, res) => {
             });
         }
 
-        // So khớp mật khẩu
-        const isMatch = await bcrypt.compare(password, user.password_hash);
+        // So khớp mật khẩu (thử cả chuỗi đã trim và nguyên bản)
+        let isMatch = await bcrypt.compare(cleanPassword, user.password_hash);
+        if (!isMatch && cleanPassword !== password) {
+            isMatch = await bcrypt.compare(password, user.password_hash);
+        }
+
         if (!isMatch) {
             return res.status(401).json({
                 success: false,
