@@ -1,0 +1,41 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Brand Primary Colors (Đồng bộ theo Logo Moccoon Vegan Cosmetics) -->
+    <color name="primary">#3D2314</color>
+    <color name="primary_light">#7A4B2A</color>
+    <color name="primary_dark">#24140B</color>
+    <color name="primary_container">#F5EBE1</color>
+    <color name="on_primary_container">#3D2314</color>
+
+    <!-- Secondary & Accent Colors (Màu Đồng Kim / Amber Gold / Nâu Hạt Dẻ) -->
+    <color name="secondary">#E8D8C8</color>
+    <color name="secondary_dark">#D6BEAA</color>
+    <color name="accent">#C68642</color>
+    <color name="accent_light">#FDF6ED</color>
+    <color name="star_gold">#E5A038</color>
+
+    <!-- Surfaces & Neutrals (Tông nền kem sữa ấm áp Kraft Paper) -->
+    <color name="white">#FFFFFF</color>
+    <color name="background">#FAF7F2</color>
+    <color name="surface">#FFFFFF</color>
+    <color name="surface_variant">#F3ECE3</color>
+    <color name="divider">#EBE3D8</color>
+
+    <!-- Text Colors (Nâu Đậm Tinh Tế) -->
+    <color name="text_primary">#2E1B0F</color>
+    <color name="text_secondary">#755C4C</color>
+    <color name="text_hint">#A8988C</color>
+    <color name="text_white">#FFFFFF</color>
+    <color name="text_price">#B3541E</color>
+
+    <!-- Status Colors -->
+    <color name="status_pending">#C68642</color>
+    <color name="status_preparing">#5C768D</color>
+    <color name="status_shipping">#8D6E63</color>
+    <color name="status_delivered">#4E8752</color>
+    <color name="status_cancelled">#A93226</color>
+
+    <!-- Chat Bubble Colors -->
+    <color name="chat_bubble_customer">#3D2314</color>
+    <color name="chat_bubble_admin">#EFE7DC</color>
+</resources>

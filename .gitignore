@@ -1,0 +1,28 @@
+# Node.js
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Android build outputs & local caches
+.gradle/
+**/build/
+android/.gradle/
+android/build/
+android/app/build/
+android/local.properties
+android/captures/
+android/.externalNativeBuild/
+android/.cxx/
+
+# IDE & Editor files
+.idea/
+.vscode/
+*.iml
+android/*.iml
+android/app/*.iml
+
+# OS generated files
+.DS_Store
+Thumbs.db
+*.log

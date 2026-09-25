@@ -1,0 +1,33 @@
+<resources>
+    <string name="app_name">Moccoon</string>
+    <string name="tagline">Chăm Sóc &amp; Làm Sạch Da Chuyên Sâu</string>
+    
+    <!-- Navigation Tabs -->
+    <string name="tab_home">Trang chủ</string>
+    <string name="tab_shop">Cửa hàng</string>
+    <string name="tab_chat">Tư vấn</string>
+    <string name="tab_cart">Giỏ hàng</string>
+    <string name="tab_profile">Tài khoản</string>
+
+    <!-- Home Screen -->
+    <string name="search_hint">Tìm kiếm sản phẩm Moccoon...</string>
+    <string name="featured_title">Bộ 3 Làm Sạch Chuyên Sâu</string>
+    <string name="featured_subtitle">Nền tảng cho làn da sạch khỏe, sáng mịn</string>
+    <string name="skincare_routine_title">Quy Trình 3 Bước Chuẩn Y Khoa</string>
+    <string name="step_1">Bước 1: Tẩy trang dịu nhẹ</string>
+    <string name="step_2">Bước 2: Rửa mặt tạo bọt mịn pH 5.5</string>
+    <string name="step_3">Bước 3: Tẩy tế bào chết sinh học</string>
+    <string name="consultation_banner">Tư vấn chu trình Skincare 1:1 miễn phí</string>
+
+    <!-- Buttons & Actions -->
+    <string name="btn_login">Đăng Nhập</string>
+    <string name="btn_register">Đăng Ký</string>
+    <string name="btn_add_to_cart">Thêm Vào Giỏ</string>
+    <string name="btn_buy_now">Mua Ngay</string>
+    <string name="btn_checkout">Tiến Hành Thanh Toán</string>
+    <string name="btn_cancel_order">Hủy Đơn Hàng</string>
+
+    <!-- Currency & Misc -->
+    <string name="currency_symbol">đ</string>
+    <string name="freeship_notice">Miễn phí vận chuyển cho đơn hàng từ 500.000đ</string>
+</resources>
