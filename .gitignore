@@ -26,3 +26,15 @@ android/app/*.iml
 .DS_Store
 Thumbs.db
 *.log
+
+# Large delivery archives & temporary package folder
+*.zip
+MOCCOON_PACKAGE/
+
+# Environment files
+.env
+.env.*
+**/.env
+**/.env.*
+
+

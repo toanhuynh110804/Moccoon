@@ -113,7 +113,50 @@ exports.createProductReview = async (req, res) => {
             });
         }
 
-        // KIỂM TRA QUY TẮC: 1 tài khoản chỉ được đánh giá 1 lần, KHÔNG ĐƯỢC XÓA SỬA
+        // 1. KIỂM TRA QUY TẮC SÀN: XÁC THỰC MUA HÀNG (VERIFIED PURCHASE)
+        // Chỉ cho phép đánh giá khi khách hàng đã mua và đơn hàng ĐÃ GIAO THÀNH CÔNG ('DELIVERED')
+        const purchaseQuery = `
+            SELECT o.id, o.order_code, o.order_status, o.created_at
+            FROM Orders o
+            INNER JOIN OrderItems oi ON o.id = oi.order_id
+            WHERE o.user_id = @userId AND oi.product_id = @prodId
+            ORDER BY 
+                CASE WHEN o.order_status = 'DELIVERED' THEN 1 ELSE 2 END,
+                o.created_at DESC
+        `;
+        const purchaseCheck = await pool.request()
+            .input('prodId', sql.Int, parseInt(productId))
+            .input('userId', sql.Int, userId)
+            .query(purchaseQuery);
+
+        if (purchaseCheck.recordset.length === 0) {
+            return res.status(403).json({
+                success: false,
+                can_review: false,
+                reason: 'NOT_PURCHASED',
+                message: '🛡️ Xác thực mua hàng: Theo quy định chống đánh giá ảo, bạn chỉ có thể gửi đánh giá sau khi đã mua sản phẩm này và nhận hàng thành công.'
+            });
+        }
+
+        const deliveredOrder = purchaseCheck.recordset.find(o => o.order_status === 'DELIVERED');
+        if (!deliveredOrder) {
+            const latestOrder = purchaseCheck.recordset[0];
+            const statusNames = {
+                'PENDING': 'Đang chờ xử lý',
+                'PREPARING': 'Đang chuẩn bị hàng',
+                'SHIPPING': 'Đang trên đường giao',
+                'CANCELLED': 'Đã bị hủy'
+            };
+            const currentStatusName = statusNames[latestOrder.order_status] || latestOrder.order_status;
+            return res.status(403).json({
+                success: false,
+                can_review: false,
+                reason: 'NOT_DELIVERED',
+                message: `📦 Đơn hàng của bạn (#${latestOrder.order_code}) hiện đang ở trạng thái "${currentStatusName}". Vui lòng quay lại đánh giá sau khi đã nhận hàng thành công nhé!`
+            });
+        }
+
+        // 2. KIỂM TRA QUY TẮC: 1 tài khoản chỉ được đánh giá 1 lần, KHÔNG ĐƯỢC XÓA SỬA
         const existingCheck = await pool.request()
             .input('prodId', sql.Int, parseInt(productId))
             .input('userId', sql.Int, userId)
@@ -257,6 +300,98 @@ exports.replyProductReview = async (req, res) => {
             message: 'Lỗi khi lưu phản hồi đánh giá.',
             error: error.message
         });
+    }
+};
+
+// 6. Kiểm tra quyền đánh giá sản phẩm (Dành cho Frontend hiển thị giao diện phù hợp)
+exports.checkReviewEligibility = async (req, res) => {
+    try {
+        const { productId } = req.params;
+        const userId = req.user.id;
+        const role = req.user.role;
+
+        if (role === 'ADMIN') {
+            return res.status(200).json({
+                success: true,
+                can_review: false,
+                reason: 'IS_ADMIN',
+                message: 'Quản trị viên chỉ kiểm duyệt đánh giá, không gửi đánh giá khách hàng.'
+            });
+        }
+
+        const pool = await getPool();
+
+        // 1. Kiểm tra đã đánh giá chưa
+        const existingCheck = await pool.request()
+            .input('prodId', sql.Int, parseInt(productId))
+            .input('userId', sql.Int, userId)
+            .query('SELECT id, rating, comment, created_at FROM ProductReviews WHERE product_id = @prodId AND user_id = @userId AND is_active = 1');
+
+        if (existingCheck.recordset.length > 0) {
+            return res.status(200).json({
+                success: true,
+                can_review: false,
+                already_reviewed: true,
+                reason: 'ALREADY_REVIEWED',
+                message: 'Bạn đã gửi đánh giá cho sản phẩm này rồi.',
+                my_review: existingCheck.recordset[0]
+            });
+        }
+
+        // 2. Kiểm tra xác thực mua hàng
+        const purchaseQuery = `
+            SELECT o.id, o.order_code, o.order_status, o.created_at
+            FROM Orders o
+            INNER JOIN OrderItems oi ON o.id = oi.order_id
+            WHERE o.user_id = @userId AND oi.product_id = @prodId
+            ORDER BY 
+                CASE WHEN o.order_status = 'DELIVERED' THEN 1 ELSE 2 END,
+                o.created_at DESC
+        `;
+        const purchaseCheck = await pool.request()
+            .input('prodId', sql.Int, parseInt(productId))
+            .input('userId', sql.Int, userId)
+            .query(purchaseQuery);
+
+        if (purchaseCheck.recordset.length === 0) {
+            return res.status(200).json({
+                success: true,
+                can_review: false,
+                reason: 'NOT_PURCHASED',
+                message: '🛡️ Xác thực mua hàng: Theo quy định chống đánh giá ảo, chỉ những khách hàng đã mua và nhận hàng thành công mới có thể gửi đánh giá cho sản phẩm này.'
+            });
+        }
+
+        const deliveredOrder = purchaseCheck.recordset.find(o => o.order_status === 'DELIVERED');
+        if (!deliveredOrder) {
+            const latestOrder = purchaseCheck.recordset[0];
+            const statusNames = {
+                'PENDING': 'Đang chờ xử lý',
+                'PREPARING': 'Đang chuẩn bị hàng',
+                'SHIPPING': 'Đang trên đường giao',
+                'CANCELLED': 'Đã bị hủy'
+            };
+            return res.status(200).json({
+                success: true,
+                can_review: false,
+                reason: 'NOT_DELIVERED',
+                order_code: latestOrder.order_code,
+                order_status: latestOrder.order_status,
+                message: `📦 Đơn hàng #${latestOrder.order_code} hiện đang ${statusNames[latestOrder.order_status] || latestOrder.order_status}. Bạn có thể đánh giá sau khi nhận hàng thành công nhé!`
+            });
+        }
+
+        // Thỏa mãn toàn bộ điều kiện!
+        return res.status(200).json({
+            success: true,
+            can_review: true,
+            reason: 'ELIGIBLE',
+            delivered_order_code: deliveredOrder.order_code,
+            message: '✓ Bạn đủ điều kiện gửi đánh giá (Đã mua và nhận hàng thành công).'
+        });
+    } catch (error) {
+        console.error('checkReviewEligibility error:', error);
+        return res.status(500).json({ success: false, message: 'Lỗi kiểm tra quyền đánh giá.', error: error.message });
     }
 };
 

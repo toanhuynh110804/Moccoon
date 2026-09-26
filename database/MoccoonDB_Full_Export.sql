@@ -1,3 +1,18 @@
+-- =============================================
+-- MOCCOON E-COMMERCE DATABASE FULL EXPORT
+-- Generated at: 2026-09-26T05:03:20.390Z
+-- =============================================
+
+IF NOT EXISTS (SELECT name FROM sys.databases WHERE name = 'MoccoonDB')
+BEGIN
+    CREATE DATABASE MoccoonDB;
+END
+GO
+
+USE MoccoonDB;
+GO
+
+-- 1. CẤU TRÚC BẢNG VÀ RÀNG BUỘC BAN ĐẦU
 -- ====================================================================
 -- DỰ ÁN: ỨNG DỤNG THƯƠNG MẠI ĐIỆN TỬ & TƯ VẤN CHĂM SÓC DA MCCOON
 -- DATABASE INITIALIZATION SCRIPT - SQL SERVER 2022
@@ -90,7 +105,7 @@ BEGIN
         stock_quantity INT NOT NULL DEFAULT 0,
         volume NVARCHAR(50) NULL, -- Dung tích (VD: 500ml, 150ml, 100ml)
         skin_type NVARCHAR(100) NULL, -- Loại da phù hợp (VD: Mọi loại da, Da nhạy cảm)
-        short_description NVARCHAR(MAX) NULL,
+        short_description NVARCHAR(500) NULL,
         description NVARCHAR(MAX) NULL,
         ingredients NVARCHAR(MAX) NULL, -- Thành phần
         benefits NVARCHAR(MAX) NULL, -- Công dụng
@@ -512,3 +527,101 @@ GO
 PRINT N'====================================================================';
 PRINT N'KHỞI TẠO CƠ SỞ DỮ LIỆU MOCCOON THÀNH CÔNG VỚI ĐẦY ĐỦ BẢNG VÀ DỮ LIỆU!';
 PRINT N'====================================================================';
+
+GO
+
+
+-- Đảm bảo cấu trúc Coupons
+IF NOT EXISTS (SELECT * FROM sys.tables WHERE name = 'Coupons')
+BEGIN
+    CREATE TABLE Coupons (
+        id INT IDENTITY(1,1) PRIMARY KEY,
+        code VARCHAR(50) NOT NULL UNIQUE,
+        title NVARCHAR(255) NOT NULL,
+        description NVARCHAR(500) NULL,
+        discount_type VARCHAR(20) NOT NULL DEFAULT 'PERCENT',
+        discount_value DECIMAL(18,2) NOT NULL,
+        max_discount_amount DECIMAL(18,2) NULL,
+        min_order_amount DECIMAL(18,2) NOT NULL DEFAULT 0,
+        usage_limit INT NOT NULL DEFAULT 100,
+        times_used INT NOT NULL DEFAULT 0,
+        start_date DATETIME NULL,
+        end_date DATETIME NULL,
+        is_active BIT NOT NULL DEFAULT 1,
+        created_at DATETIME NOT NULL DEFAULT GETDATE(),
+        updated_at DATETIME NOT NULL DEFAULT GETDATE()
+    );
+END
+GO
+
+IF NOT EXISTS (SELECT * FROM sys.columns WHERE object_id = OBJECT_ID('Orders') AND name = 'coupon_code')
+BEGIN
+    ALTER TABLE Orders ADD coupon_code VARCHAR(50) NULL;
+END
+GO
+
+-- 2. DỮ LIỆU HIỆN TẠI TRONG CƠ SỞ DỮ LIỆU
+-- Data for Users (2 rows)
+SET IDENTITY_INSERT Users ON;
+IF NOT EXISTS (SELECT 1 FROM Users WHERE id = 1) INSERT INTO Users (id, full_name, email, phone, password_hash, role, avatar_url, address, is_active, created_at, updated_at) VALUES (1, N'Quản Trị Viên Moccoon', N'admin@moccoon.vn', N'0901234567', N'$2b$10$mjn.T45GT5S9NhJc1VY3tOOw5sr7zn/QRvAfDiklu6Wam0qm/Hr8q', N'ADMIN', N'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150', N'Trụ sở Moccoon Skincare, TP. Hồ Chí Minh', 1, '2026-09-25 09:47:17', '2026-09-25 09:47:17');
+IF NOT EXISTS (SELECT 1 FROM Users WHERE id = 15) INSERT INTO Users (id, full_name, email, phone, password_hash, role, avatar_url, address, is_active, created_at, updated_at) VALUES (15, N'Nguyễn Thị Mỹ Tiên', N'mytien@gmail.com', N'0123456789', N'$2b$10$THJw6JMv10q1RVzQgye.CebTWkGod6wRwjIWAzzwRgYzEof5pSZoa', N'CUSTOMER', NULL, NULL, 1, '2026-09-26 10:33:22', '2026-09-26 10:33:22');
+SET IDENTITY_INSERT Users OFF;
+GO
+
+-- Data for Categories (3 rows)
+SET IDENTITY_INSERT Categories ON;
+IF NOT EXISTS (SELECT 1 FROM Categories WHERE id = 2) INSERT INTO Categories (id, name, slug, description, image_url, sort_order, is_active, created_at) VALUES (2, N'Sữa Rửa Mặt', N'sua-rua-mat', N'Rửa sạch bụi mịn, cân bằng độ pH tự nhiên cho làn da ẩm mượt', N'https://images.unsplash.com/photo-1556228722-d0b5be7490bf?w=300', 1, 1, '2026-09-25 09:47:17');
+IF NOT EXISTS (SELECT 1 FROM Categories WHERE id = 3) INSERT INTO Categories (id, name, slug, description, image_url, sort_order, is_active, created_at) VALUES (3, N'Tẩy Trang', N't-y-trang', N'Lấy đi tế bào già cỗi, thông thoáng lỗ chân lông, ngừa mụn', N'https://images.unsplash.com/photo-1608248597359-5f75e2e8e9ea?w=300', 2, 1, '2026-09-25 09:47:17');
+IF NOT EXISTS (SELECT 1 FROM Categories WHERE id = 9) INSERT INTO Categories (id, name, slug, description, image_url, sort_order, is_active, created_at) VALUES (9, N'Mặt nạ', N'm-t-n', N'hccw', NULL, 3, 1, '2026-09-25 21:17:34');
+SET IDENTITY_INSERT Categories OFF;
+GO
+
+-- Data for Products (1 rows)
+SET IDENTITY_INSERT Products ON;
+IF NOT EXISTS (SELECT 1 FROM Products WHERE id = 1) INSERT INTO Products (id, category_id, name, slug, price, original_price, stock_quantity, volume, skin_type, short_description, description, ingredients, benefits, usage_instructions, is_featured, is_active, created_at, updated_at) VALUES (1, 2, N'hưebivbwi', N'huebivbwi-5752', 200000, 300000, 98, N'500ml', N'Mọi loại da', N'rbbrbr', N'rbbrbr', NULL, NULL, NULL, 1, 1, '2026-09-26 11:06:05', '2026-09-26 11:06:05');
+SET IDENTITY_INSERT Products OFF;
+GO
+
+-- Data for ProductImages (1 rows)
+SET IDENTITY_INSERT ProductImages ON;
+IF NOT EXISTS (SELECT 1 FROM ProductImages WHERE id = 17) INSERT INTO ProductImages (id, product_id, image_url, is_primary, sort_order) VALUES (17, 1, N'/uploads/moccoon-1790395559440-181037648.jpg', 1, 1);
+SET IDENTITY_INSERT ProductImages OFF;
+GO
+
+-- Data for Carts (2 rows)
+SET IDENTITY_INSERT Carts ON;
+IF NOT EXISTS (SELECT 1 FROM Carts WHERE id = 2) INSERT INTO Carts (id, user_id, updated_at) VALUES (2, 1, '2026-09-25 10:49:26');
+IF NOT EXISTS (SELECT 1 FROM Carts WHERE id = 14) INSERT INTO Carts (id, user_id, updated_at) VALUES (14, 15, '2026-09-26 10:33:22');
+SET IDENTITY_INSERT Carts OFF;
+GO
+
+-- Data for Coupons (3 rows)
+SET IDENTITY_INSERT Coupons ON;
+IF NOT EXISTS (SELECT 1 FROM Coupons WHERE id = 1) INSERT INTO Coupons (id, code, title, description, discount_type, discount_value, max_discount_amount, min_order_amount, usage_limit, times_used, start_date, end_date, is_active, created_at, updated_at) VALUES (1, N'MCCOON10', N'Giảm 10% Cho Đơn Hàng', N'Ưu đãi giảm 10% tối đa 40.000đ cho đơn hàng từ 200.000đ', N'PERCENT', 10, 40000, 200000, 200, 1, '2026-09-26 11:12:20', '2026-12-26 11:12:20', 1, '2026-09-26 11:12:20', '2026-09-26 11:44:25');
+IF NOT EXISTS (SELECT 1 FROM Coupons WHERE id = 2) INSERT INTO Coupons (id, code, title, description, discount_type, discount_value, max_discount_amount, min_order_amount, usage_limit, times_used, start_date, end_date, is_active, created_at, updated_at) VALUES (2, N'VEGAN30K', N'Giảm Ngay 30.000đ', N'Giảm trực tiếp 30.000đ tiền mặt cho đơn hàng từ 250.000đ', N'FIXED', 30000, NULL, 250000, 150, 0, '2026-09-26 11:12:20', '2026-12-26 11:12:20', 1, '2026-09-26 11:12:20', '2026-09-26 11:12:20');
+IF NOT EXISTS (SELECT 1 FROM Coupons WHERE id = 3) INSERT INTO Coupons (id, code, title, description, discount_type, discount_value, max_discount_amount, min_order_amount, usage_limit, times_used, start_date, end_date, is_active, created_at, updated_at) VALUES (3, N'CHAO2026', N'Mừng Ra Mắt 15%', N'Giảm 15% tối đa 50.000đ cho mọi đơn hàng từ 150.000đ', N'PERCENT', 15, 50000, 150000, 100, 0, '2026-09-26 11:12:20', '2027-03-26 11:12:20', 1, '2026-09-26 11:12:20', '2026-09-26 11:12:20');
+SET IDENTITY_INSERT Coupons OFF;
+GO
+
+-- Data for Orders (1 rows)
+SET IDENTITY_INSERT Orders ON;
+IF NOT EXISTS (SELECT 1 FROM Orders WHERE id = 3) INSERT INTO Orders (id, order_code, user_id, total_amount, shipping_fee, discount_amount, final_amount, payment_method, payment_status, order_status, receiver_name, receiver_phone, shipping_address, note, created_at, updated_at, coupon_code) VALUES (3, N'MC260926-9547', 15, 200000, 30000, 20000, 210000, N'COD', N'PAID', N'DELIVERED', N'Nguyễn Thị Mỹ Tiên', N'0123456789', N'Ha Phuong Hand Embroidery, 92C3/C4, Đường Lê Thánh Tôn, Khu phố 3, Phường Sài Gòn, Thành phố Hồ Chí Minh, 71016, Việt Nam', N'giao trong khung giờ từ 13h-15h', '2026-09-26 11:44:25', '2026-09-26 11:44:55', N'MCCOON10');
+SET IDENTITY_INSERT Orders OFF;
+GO
+
+-- Data for OrderItems (1 rows)
+SET IDENTITY_INSERT OrderItems ON;
+IF NOT EXISTS (SELECT 1 FROM OrderItems WHERE id = 16) INSERT INTO OrderItems (id, order_id, product_id, product_name, product_image, price, quantity, total_price) VALUES (16, 3, 1, N'hưebivbwi', N'/uploads/moccoon-1790395559440-181037648.jpg', 200000, 1, 200000);
+SET IDENTITY_INSERT OrderItems OFF;
+GO
+
+-- Data for Notifications (5 rows)
+SET IDENTITY_INSERT Notifications ON;
+IF NOT EXISTS (SELECT 1 FROM Notifications WHERE id = 21) INSERT INTO Notifications (id, user_id, title, content, type, reference_id, is_read, created_at) VALUES (21, 1, N'Đặt hàng thành công!', N'Đơn hàng #MC260926-4431 đã được Moccoon tiếp nhận và đang chờ xử lý.', N'ORDER', N'MC260926-4431', 0, '2026-09-26 11:29:50');
+IF NOT EXISTS (SELECT 1 FROM Notifications WHERE id = 22) INSERT INTO Notifications (id, user_id, title, content, type, reference_id, is_read, created_at) VALUES (22, 15, N'Đặt hàng thành công!', N'Đơn hàng #MC260926-9547 đã được Moccoon tiếp nhận và đang chờ xử lý.', N'ORDER', N'MC260926-9547', 0, '2026-09-26 11:44:25');
+IF NOT EXISTS (SELECT 1 FROM Notifications WHERE id = 23) INSERT INTO Notifications (id, user_id, title, content, type, reference_id, is_read, created_at) VALUES (23, 15, N'Cập nhật đơn hàng #MC260926-9547', N'Đơn hàng #MC260926-9547 của bạn đang được chuẩn bị hàng và đóng gói.', N'ORDER', N'MC260926-9547', 0, '2026-09-26 11:44:46');
+IF NOT EXISTS (SELECT 1 FROM Notifications WHERE id = 24) INSERT INTO Notifications (id, user_id, title, content, type, reference_id, is_read, created_at) VALUES (24, 15, N'Cập nhật đơn hàng #MC260926-9547', N'Đơn hàng #MC260926-9547 của bạn đang trên đường giao đến bạn.', N'ORDER', N'MC260926-9547', 0, '2026-09-26 11:44:49');
+IF NOT EXISTS (SELECT 1 FROM Notifications WHERE id = 25) INSERT INTO Notifications (id, user_id, title, content, type, reference_id, is_read, created_at) VALUES (25, 15, N'Cập nhật đơn hàng #MC260926-9547', N'Đơn hàng #MC260926-9547 của bạn đã được giao thành công. Cảm ơn bạn đã lựa chọn Moccoon!', N'ORDER', N'MC260926-9547', 0, '2026-09-26 11:44:55');
+SET IDENTITY_INSERT Notifications OFF;
+GO
+

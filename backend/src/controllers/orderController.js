@@ -12,7 +12,8 @@ exports.checkout = async (req, res) => {
         const userId = req.user.id;
         const {
             receiver_name, receiver_phone, shipping_address,
-            payment_method = 'COD', note, items, from_cart = true
+            payment_method = 'COD', note, items, from_cart = true,
+            coupon_code
         } = req.body;
 
         if (!receiver_name || !receiver_phone || !shipping_address) {
@@ -90,10 +91,46 @@ exports.checkout = async (req, res) => {
             }
         }
 
-        // Tính tổng tiền
+        // Tính tổng tiền hàng
         const totalAmount = orderItemsToProcess.reduce((sum, item) => sum + (Number(item.price) * item.quantity), 0);
         const shippingFee = totalAmount >= 500000 ? 0 : 30000; // Miễn phí vận chuyển cho đơn từ 500.000đ
-        const finalAmount = totalAmount + shippingFee;
+
+        // Kiểm tra mã giảm giá (nếu có)
+        let discountAmount = 0;
+        let validCouponId = null;
+        let appliedCouponCode = null;
+
+        if (coupon_code && typeof coupon_code === 'string') {
+            const cleanCoupon = coupon_code.trim().toUpperCase();
+            const cRes = await pool.request()
+                .input('code', sql.VarChar, cleanCoupon)
+                .query(`
+                    SELECT id, code, discount_type, discount_value, max_discount_amount, min_order_amount, usage_limit, times_used, is_active
+                    FROM Coupons
+                    WHERE UPPER(code) = @code
+                      AND is_active = 1
+                      AND (start_date IS NULL OR start_date <= GETDATE())
+                      AND (end_date IS NULL OR end_date >= GETDATE())
+                      AND times_used < usage_limit
+                `);
+            if (cRes.recordset.length > 0) {
+                const c = cRes.recordset[0];
+                if (totalAmount >= parseFloat(c.min_order_amount || 0)) {
+                    if (c.discount_type === 'PERCENT') {
+                        const rawDiscount = totalAmount * (parseFloat(c.discount_value) / 100);
+                        const maxD = c.max_discount_amount ? parseFloat(c.max_discount_amount) : Infinity;
+                        discountAmount = Math.min(rawDiscount, maxD);
+                    } else {
+                        discountAmount = Math.min(parseFloat(c.discount_value), totalAmount);
+                    }
+                    discountAmount = Math.round(discountAmount);
+                    validCouponId = c.id;
+                    appliedCouponCode = c.code;
+                }
+            }
+        }
+
+        const finalAmount = Math.max(0, totalAmount - discountAmount + shippingFee);
         const orderCode = generateOrderCode();
 
         // Sử dụng Transaction để đảm bảo tính toàn vẹn
@@ -105,14 +142,14 @@ exports.checkout = async (req, res) => {
             const orderRequest = new sql.Request(transaction);
             const insertOrderQuery = `
                 INSERT INTO Orders (
-                    order_code, user_id, total_amount, shipping_fee, final_amount,
-                    payment_method, payment_status, order_status,
+                    order_code, user_id, total_amount, shipping_fee, discount_amount, final_amount,
+                    coupon_code, payment_method, payment_status, order_status,
                     receiver_name, receiver_phone, shipping_address, note
                 )
                 OUTPUT INSERTED.id, INSERTED.order_code, INSERTED.final_amount, INSERTED.order_status, INSERTED.created_at
                 VALUES (
-                    @order_code, @user_id, @total_amount, @shipping_fee, @final_amount,
-                    @payment_method, @payment_status, 'PENDING',
+                    @order_code, @user_id, @total_amount, @shipping_fee, @discount_amount, @final_amount,
+                    @coupon_code, @payment_method, @payment_status, 'PENDING',
                     @receiver_name, @receiver_phone, @shipping_address, @note
                 )
             `;
@@ -121,7 +158,9 @@ exports.checkout = async (req, res) => {
             orderRequest.input('user_id', sql.Int, userId);
             orderRequest.input('total_amount', sql.Decimal(18, 2), totalAmount);
             orderRequest.input('shipping_fee', sql.Decimal(18, 2), shippingFee);
+            orderRequest.input('discount_amount', sql.Decimal(18, 2), discountAmount);
             orderRequest.input('final_amount', sql.Decimal(18, 2), finalAmount);
+            orderRequest.input('coupon_code', sql.VarChar, appliedCouponCode);
             orderRequest.input('payment_method', sql.NVarChar, payment_method);
             orderRequest.input('payment_status', sql.NVarChar, payment_method === 'BANKING' ? 'PAID' : 'UNPAID');
             orderRequest.input('receiver_name', sql.NVarChar, receiver_name);
@@ -132,6 +171,13 @@ exports.checkout = async (req, res) => {
             const orderResult = await orderRequest.query(insertOrderQuery);
             const createdOrder = orderResult.recordset[0];
             const orderId = createdOrder.id;
+
+            // Nếu áp dụng mã giảm giá thành công -> Tăng số lần đã dùng lên 1
+            if (validCouponId) {
+                const couponReq = new sql.Request(transaction);
+                couponReq.input('cId', sql.Int, validCouponId);
+                await couponReq.query('UPDATE Coupons SET times_used = times_used + 1, updated_at = GETDATE() WHERE id = @cId');
+            }
 
             // 2. Thêm các mục chi tiết OrderItems và trừ tồn kho Products
             for (const item of orderItemsToProcess) {

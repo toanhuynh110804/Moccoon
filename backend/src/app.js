@@ -104,6 +104,7 @@ const uploadRoutes = require('./routes/uploadRoutes');
 const reviewRoutes = require('./routes/reviewRoutes');
 const favoriteRoutes = require('./routes/favoriteRoutes');
 const addressRoutes = require('./routes/addressRoutes');
+const couponRoutes = require('./routes/couponRoutes');
 
 // Gắn các Routes vào App
 app.use('/api/auth', authRoutes);
@@ -119,6 +120,7 @@ app.use('/api/upload', uploadRoutes);
 app.use('/api/reviews', reviewRoutes);
 app.use('/api/favorites', favoriteRoutes);
 app.use('/api/addresses', addressRoutes);
+app.use('/api/coupons', couponRoutes);
 
 // Khởi chạy Android Studio từ giao diện web
 app.post('/api/system/open-studio', (req, res) => {

@@ -6,6 +6,9 @@ const { verifyToken, requireAdmin } = require('../middlewares/authMiddleware');
 // Lấy danh sách đánh giá của sản phẩm (Public)
 router.get('/', reviewController.getProductReviews);
 
+// Kiểm tra quyền gửi đánh giá của người dùng (Xác thực mua hàng)
+router.get('/eligibility', verifyToken, reviewController.checkReviewEligibility);
+
 // Gửi đánh giá mới cho sản phẩm (Cần đăng nhập - Mỗi tài khoản 1 lần, không được xóa sửa)
 router.post('/', verifyToken, reviewController.createProductReview);
 

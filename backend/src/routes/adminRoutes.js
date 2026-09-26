@@ -6,6 +6,7 @@ const { verifyToken, requireAdmin } = require('../middlewares/authMiddleware');
 router.use(verifyToken, requireAdmin);
 
 router.get('/dashboard', adminController.getDashboardStats);
+router.get('/export-excel', adminController.exportExcel);
 router.get('/customers', adminController.getCustomers);
 router.put('/customers/:id/status', adminController.toggleCustomerStatus);
 router.delete('/customers/:id', adminController.deleteCustomer);

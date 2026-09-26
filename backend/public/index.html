@@ -10,6 +10,11 @@
     <link href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:ital,wght@0,300;0,400;0,500;0,600;0,700;0,800;1,400&family=Plus+Jakarta+Sans:ital,wght@0,400;0,500;0,600;0,700;0,800;1,400&display=swap" rel="stylesheet">
     <!-- Socket.io -->
     <script src="https://cdn.socket.io/4.7.5/socket.io.min.js"></script>
+    <!-- SheetJS for Excel export -->
+    <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+    <!-- Leaflet Interactive Maps (OpenStreetMap) -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 
     <style>
         :root {
@@ -446,16 +451,19 @@
         }
 
         .admin-header {
-            padding: 44px 20px 14px;
+            padding: 42px 14px 12px;
             background: #2D1A0E;
             color: #FFFFFF;
             display: flex;
             align-items: center;
             justify-content: space-between;
+            gap: 8px;
+            box-sizing: border-box;
+            width: 100%;
         }
 
         body.desktop-mode .admin-header {
-            padding: 18px 24px 14px;
+            padding: 18px 20px 14px;
         }
 
         .admin-header-title {
@@ -478,34 +486,58 @@
         }
 
         .admin-header-title p {
-            font-size: 10.5px;
+            font-size: 10px;
             color: #E6A868;
             font-weight: 700;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            max-width: 160px;
         }
 
         .admin-actions {
             display: flex;
-            gap: 8px;
+            gap: 6px;
             align-items: center;
+            flex-shrink: 0;
         }
 
         .admin-btn-mode {
-            background: rgba(255, 255, 255, 0.15);
+            background: rgba(255, 255, 255, 0.12);
             color: #FFFFFF;
-            border: 1px solid rgba(255, 255, 255, 0.25);
-            padding: 6px 12px;
-            border-radius: 16px;
+            border: 1px solid rgba(255, 255, 255, 0.22);
+            height: 36px;
+            padding: 0 11px;
+            border-radius: 10px;
             font-size: 11px;
             font-weight: 700;
             cursor: pointer;
             transition: all 0.2s;
-            display: flex;
+            display: inline-flex;
             align-items: center;
-            gap: 4px;
+            justify-content: center;
+            gap: 5px;
+            white-space: nowrap;
+            box-sizing: border-box;
         }
 
         .admin-btn-mode:hover {
-            background: rgba(255, 255, 255, 0.25);
+            background: rgba(255, 255, 255, 0.22);
+        }
+
+        .admin-btn-mode.btn-logout {
+            width: 36px;
+            min-width: 36px;
+            padding: 0;
+            background: rgba(239, 68, 68, 0.18);
+            border-color: rgba(239, 68, 68, 0.35);
+            color: #FCA5A5;
+            font-size: 15px;
+        }
+
+        .admin-btn-mode.btn-logout:hover {
+            background: rgba(239, 68, 68, 0.3);
+            border-color: rgba(239, 68, 68, 0.5);
         }
 
         /* Admin Navigation Bar: Luôn nằm dính trực tiếp dưới Admin Header */
@@ -983,28 +1015,47 @@
         .status-DELIVERED { background: #D1FAE5; color: #059669; }
         .status-CANCELLED { background: #FEE2E2; color: #991B1B; }
 
-        /* Toast Popup */
+        /* Toast Popup (Thông báo nổi hiện đại & mượt mà) */
         .toast-popup {
             position: absolute;
-            top: 55px;
+            top: 48px;
             left: 50%;
-            transform: translateX(-50%);
-            background: #2E1B0F;
+            transform: translate(-50%, -15px) scale(0.96);
+            background: rgba(46, 27, 15, 0.94);
             color: #FFFFFF;
-            padding: 9px 18px;
-            border-radius: 20px;
-            font-size: 12px;
+            padding: 10px 20px;
+            border-radius: 30px;
+            font-size: 12.5px;
             font-weight: 600;
-            z-index: 2000;
+            z-index: 10000;
             opacity: 0;
-            transition: opacity 0.3s;
             pointer-events: none;
-            white-space: nowrap;
-            box-shadow: 0 4px 14px rgba(0, 0, 0, 0.3);
+            max-width: 88%;
+            text-align: center;
+            line-height: 1.4;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.35), 0 0 0 1px rgba(255, 255, 255, 0.16);
+            backdrop-filter: blur(14px);
+            transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
         }
 
         .toast-popup.show {
             opacity: 1;
+            transform: translate(-50%, 0) scale(1);
+        }
+
+        .toast-popup.success {
+            background: rgba(22, 101, 52, 0.95);
+            border: 1px solid rgba(74, 222, 128, 0.3);
+        }
+
+        .toast-popup.error {
+            background: rgba(153, 27, 27, 0.95);
+            border: 1px solid rgba(248, 113, 113, 0.3);
+        }
+
+        .toast-popup.warning {
+            background: rgba(180, 83, 9, 0.95);
+            border: 1px solid rgba(251, 191, 36, 0.3);
         }
 
         /* CUSTOMER BOTTOM NAVIGATION */
@@ -1708,30 +1759,34 @@
 
 <div class="workspace-container">
 
-    <!-- Left Info Panel -->
-    <div class="info-panel">
-        <div class="brand-badge">🌿 MOCCOON VEGAN COSMETICS • OFFICIAL</div>
-        <h1 class="info-title">Hệ Thống Quản Trị &amp; Bán Hàng <span>Moccoon</span></h1>
-        <p class="info-desc">
-            Phân quyền chuyên sâu 2 vai trò: <strong>Khách Hàng (Customer)</strong> và <strong>Quản Trị Viên (Admin)</strong>. Kết nối đồng bộ Cơ sở dữ liệu <strong>SQL Server 2022 (MoccoonDB)</strong>.
+    <!-- Left Info Panel: Brand & Welcome -->
+    <div class="info-panel" style="display: flex; flex-direction: column; justify-content: center; gap: 20px;">
+        <div style="display: flex; align-items: center; gap: 16px;">
+            <img src="/uploads/logo_moccoon.png" alt="Moccoon Logo" style="width: 72px; height: 72px; border-radius: 50%; border: 3px solid var(--accent); background: #ffffff; padding: 4px; box-shadow: 0 10px 25px rgba(0,0,0,0.3); object-fit: contain;">
+            <div>
+                <div class="brand-badge" style="margin-bottom: 6px;">🌿 MOCCOON VEGAN COSMETICS</div>
+                <div style="font-size: 14px; color: #D6BEAA; letter-spacing: 0.5px;">Mỹ phẩm thuần chay chuẩn y khoa</div>
+            </div>
+        </div>
+
+        <h1 class="info-title" style="font-size: 38px; margin: 0; line-height: 1.25;">Chào Mừng Đến Với <span>Moccoon</span></h1>
+        
+        <p class="info-desc" style="font-size: 15.5px; color: #E8D8C8; line-height: 1.6; margin: 0;">
+            Nuôi dưỡng làn da khỏe đẹp tự nhiên với tinh hoa thảo mộc thuần chay và quy chuẩn khoa học an lành.
         </p>
 
-        <div class="feature-cards">
-            <div class="feature-card">
-                <h4>🛡️ Bảng Điều Hành Admin</h4>
-                <p>Thống kê doanh thu, duyệt và cập nhật trạng thái đơn hàng thời gian thực.</p>
+        <div style="display: flex; gap: 12px; margin-top: 10px;">
+            <div style="flex: 1; background: rgba(255, 255, 255, 0.06); border: 1px solid rgba(255, 255, 255, 0.12); backdrop-filter: blur(10px); padding: 14px 16px; border-radius: 14px; text-align: center;">
+                <div style="font-size: 24px; margin-bottom: 4px;">🌱</div>
+                <div style="font-size: 13px; font-weight: 700; color: #FAF7F2;">100% Thuần Chay</div>
             </div>
-            <div class="feature-card">
-                <h4>🧴 Quản Lý Sản Phẩm</h4>
-                <p>Thêm mới, sửa giá, cập nhật tồn kho Bộ 3 làm sạch &amp; danh mục mỹ phẩm.</p>
+            <div style="flex: 1; background: rgba(255, 255, 255, 0.06); border: 1px solid rgba(255, 255, 255, 0.12); backdrop-filter: blur(10px); padding: 14px 16px; border-radius: 14px; text-align: center;">
+                <div style="font-size: 24px; margin-bottom: 4px;">🔬</div>
+                <div style="font-size: 13px; font-weight: 700; color: #FAF7F2;">Chuẩn Y Khoa</div>
             </div>
-            <div class="feature-card">
-                <h4>🏷️ Quản Lý Danh Mục</h4>
-                <p>Tùy chỉnh danh mục: Tẩy trang, Rửa mặt, Tẩy tế bào chết, Combo.</p>
-            </div>
-            <div class="feature-card">
-                <h4>💬 Hỗ Trợ Khách Hàng</h4>
-                <p>Kênh chat tư vấn chuyên sâu chuẩn y khoa qua Socket.io thời gian thực.</p>
+            <div style="flex: 1; background: rgba(255, 255, 255, 0.06); border: 1px solid rgba(255, 255, 255, 0.12); backdrop-filter: blur(10px); padding: 14px 16px; border-radius: 14px; text-align: center;">
+                <div style="font-size: 24px; margin-bottom: 4px;">✨</div>
+                <div style="font-size: 13px; font-weight: 700; color: #FAF7F2;">Lành Tính &amp; Dịu Nhẹ</div>
             </div>
         </div>
     </div>
@@ -1761,7 +1816,7 @@
                     <form id="loginForm" class="auth-form" onsubmit="handleLoginSubmit(event)">
                         <div class="auth-field">
                             <label>Email hoặc Số điện thoại</label>
-                            <input type="text" id="loginAccount" class="auth-input" placeholder="Ví dụ: admin@moccoon.vn" required>
+                            <input type="text" id="loginAccount" class="auth-input" placeholder="Nhập email hoặc số điện thoại..." required>
                         </div>
                         <div class="auth-field">
                             <label>Mật khẩu</label>
@@ -1788,28 +1843,33 @@
                             <input type="tel" id="regPhone" class="auth-input" placeholder="0912345678">
                         </div>
                         <div class="auth-field">
-                            <label>Địa chỉ nhận hàng</label>
-                            <input type="text" id="regAddress" class="auth-input" placeholder="Số nhà, đường, quận/huyện...">
+                            <label>Mật khẩu (Tối thiểu 8 ký tự, mức Khá trở lên)</label>
+                            <input type="password" id="regPassword" class="auth-input" placeholder="Tạo mật khẩu bảo mật..." required minlength="8" oninput="onRegisterPasswordInput()">
+                            
+                            <!-- BẢNG ĐO ĐỘ MẠNH MẬT KHẨU -->
+                            <div id="pwdStrengthBox" style="margin-top: 8px; background: rgba(0,0,0,0.02); border: 1px solid rgba(0,0,0,0.08); border-radius: 8px; padding: 10px;">
+                                <div style="display: flex; justify-content: space-between; align-items: center; font-size: 12px; margin-bottom: 6px;">
+                                    <span style="color: var(--text-secondary); font-weight: 500;">Độ mạnh mật khẩu:</span>
+                                    <span id="pwdStrengthBadge" style="font-weight: 700; font-size: 11.5px; padding: 2px 8px; border-radius: 6px; background: #E5E7EB; color: #6B7280;">Chưa nhập</span>
+                                </div>
+                                <div style="display: flex; gap: 4px; height: 6px; width: 100%; border-radius: 4px; overflow: hidden; margin-bottom: 6px;">
+                                    <div id="pwdBar1" style="flex: 1; height: 100%; background: #E5E7EB; transition: background 0.3s ease; border-radius: 3px;"></div>
+                                    <div id="pwdBar2" style="flex: 1; height: 100%; background: #E5E7EB; transition: background 0.3s ease; border-radius: 3px;"></div>
+                                    <div id="pwdBar3" style="flex: 1; height: 100%; background: #E5E7EB; transition: background 0.3s ease; border-radius: 3px;"></div>
+                                    <div id="pwdBar4" style="flex: 1; height: 100%; background: #E5E7EB; transition: background 0.3s ease; border-radius: 3px;"></div>
+                                </div>
+                                <div id="pwdTipText" style="font-size: 11px; color: var(--text-secondary); line-height: 1.4;">
+                                    ℹ️ <i>Yêu cầu: tối thiểu 8 ký tự, kết hợp ít nhất 2 nhóm (chữ thường, chữ hoa, số hoặc ký tự đặc biệt) để đạt mức <b>Khá</b> trở lên.</i>
+                                </div>
+                            </div>
                         </div>
-                        <div class="auth-field">
-                            <label>Mật khẩu (Tối thiểu 6 ký tự)</label>
-                            <input type="password" id="regPassword" class="auth-input" placeholder="Tạo mật khẩu..." required minlength="6">
+                        <div class="auth-field" style="margin-top: 10px;">
+                            <label>Xác nhận lại mật khẩu</label>
+                            <input type="password" id="regConfirmPassword" class="auth-input" placeholder="Nhập lại chính xác mật khẩu..." required minlength="8" oninput="onRegisterConfirmPasswordInput()">
+                            <div id="pwdMatchStatus" style="font-size: 11.5px; font-weight: 600; margin-top: 5px; display: none;"></div>
                         </div>
-                        <button type="submit" class="btn-auth-submit">Đăng Ký Tài Khoản Khách Hàng</button>
+                        <button type="submit" id="btnRegisterSubmit" class="btn-auth-submit">Đăng Ký Tài Khoản Khách Hàng</button>
                     </form>
-
-                    <!-- Quick Testing Buttons -->
-                    <div class="quick-accounts-box">
-                        <p>Chọn nhanh tài khoản thử nghiệm</p>
-                        <div class="quick-acc-row">
-                            <button type="button" class="quick-acc-btn" onclick="fillQuickLogin('admin@moccoon.vn', 'Admin@123456')">
-                                🛡️ Quyền Admin (Quản Trị)
-                            </button>
-                            <button type="button" class="quick-acc-btn" onclick="fillQuickLogin('khachhang@gmail.com', 'Admin@123456')">
-                                👤 Quyền Khách Hàng
-                            </button>
-                        </div>
-                    </div>
                 </div>
 
                 <!-- SCREEN: ADMIN DASHBOARD PORTAL -->
@@ -1818,21 +1878,16 @@
                     <div class="admin-sticky-top">
                         <!-- Admin Header -->
                         <div class="admin-header">
-                            <div class="admin-header-title" onclick="switchAdminTab('stats')" title="Nhấn để quay về Bảng Thống Kê / Dashboard">
-                                <img src="/uploads/logo_moccoon.png" alt="" style="width: 38px; height: 38px; border-radius: 50%; border: 2px solid var(--accent); background: #fff;">
-                                <div>
-                                    <div style="display: flex; align-items: center; gap: 6px;">
-                                        <h3>Moccoon Admin Portal</h3>
-                                        <span style="font-size: 9.5px; background: rgba(198,134,66,0.3); color: #F5D0A9; border: 1px solid rgba(198,134,66,0.6); padding: 1px 6px; border-radius: 6px; font-weight: 800;">ADMIN</span>
-                                    </div>
-                                    <p id="adminCurrentTabSubtitle">🛡️ BẢNG ĐIỀU HÀNH HỆ THỐNG</p>
-                                </div>
+                            <div class="admin-header-title" onclick="switchAdminTab('stats')" title="Nhấn để quay về Bảng Thống Kê / Dashboard" style="display: flex; align-items: center; gap: 8px; flex-shrink: 0;">
+                                <img src="/uploads/logo_moccoon.png" alt="Moccoon" style="width: 34px; height: 34px; border-radius: 50%; border: 1.5px solid var(--accent); background: #fff; flex-shrink: 0;">
+                                <span style="font-size: 13.5px; font-weight: 800; color: #FAF7F2; background: rgba(198,134,66,0.28); border: 1px solid rgba(198,134,66,0.6); padding: 4px 8px; border-radius: 8px; letter-spacing: 1px;">ADMIN</span>
+                                <span id="adminCurrentTabSubtitle" style="display: none;"></span>
                             </div>
                             <div class="admin-actions">
-                                <button class="admin-btn-mode" onclick="toggleAdminPreviewCustomer()" title="Xem thử giao diện khách">
-                                    🛍️ Giao diện Khách
+                                <button class="admin-btn-mode" onclick="toggleAdminPreviewCustomer()" title="Xem thử giao diện khách hàng">
+                                    🛍️ Xem Web Khách
                                 </button>
-                                <button class="admin-btn-mode" onclick="handleLogout()" style="color: #FF8A8A;" title="Đăng xuất">
+                                <button class="admin-btn-mode btn-logout" onclick="handleLogout()" title="Đăng xuất khỏi hệ thống">
                                     🚪
                                 </button>
                             </div>
@@ -1851,6 +1906,9 @@
                             </div>
                             <div id="navAdminCategories" class="admin-nav-item" onclick="switchAdminTab('categories')">
                                 🏷️ Danh Mục (<span id="adminCategoriesCount">0</span>)
+                            </div>
+                            <div id="navAdminCoupons" class="admin-nav-item" onclick="switchAdminTab('coupons')">
+                                🎟️ Khuyến Mãi (<span id="adminCouponsCount">0</span>)
                             </div>
                             <div id="navAdminUsers" class="admin-nav-item" onclick="switchAdminTab('users')">
                                 👥 Khách Hàng
@@ -1886,10 +1944,57 @@
                             </div>
                         </div>
 
-                        <!-- Top Selling Products -->
-                        <div style="background: #FFFFFF; border-radius: var(--radius-md); padding: 16px; border: 1px solid var(--divider); box-shadow: var(--shadow-card);">
-                            <h4 style="font-size: 13.5px; font-weight: 800; color: var(--primary); margin-bottom: 12px;">🧴 Top Sản Phẩm Bán Chạy (Bộ 3 Làm Sạch)</h4>
-                            <div id="adminTopProductsList" style="display: flex; flex-direction: column; gap: 8px;"></div>
+                        <!-- BIỂU ĐỒ CỘT BÁO CÁO & XUẤT FILE EXCEL -->
+                        <div style="background: #FFFFFF; border-radius: var(--radius-md); padding: 16px; border: 1px solid var(--divider); box-shadow: var(--shadow-card); display: flex; flex-direction: column; gap: 14px;">
+                            <!-- Header & Công cụ điều khiển -->
+                            <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px;">
+                                <div>
+                                    <div style="display: flex; align-items: center; gap: 6px;">
+                                        <span style="font-size: 16px;">📊</span>
+                                        <h4 style="font-size: 14px; font-weight: 800; color: var(--primary); margin: 0;">Biểu Đồ Cột Báo Cáo (7 Ngày Gần Nhất)</h4>
+                                    </div>
+                                    <div style="font-size: 11px; color: var(--text-hint); margin-top: 2px;">Theo dõi trực quan biến động kinh doanh thực tế</div>
+                                </div>
+                                <div style="display: flex; align-items: center; gap: 8px; flex-wrap: wrap;">
+                                    <!-- Toggle chế độ xem Doanh thu / Đơn hàng -->
+                                    <div style="display: flex; background: var(--surface-variant); padding: 3px; border-radius: 8px; border: 1px solid var(--divider); font-size: 11px; font-weight: 700;">
+                                        <button id="btnChartModeRevenue" type="button" onclick="setAdminChartMode('revenue')" style="padding: 4px 10px; border-radius: 6px; border: none; background: #FFFFFF; color: var(--primary); font-weight: 800; cursor: pointer; box-shadow: 0 1px 3px rgba(0,0,0,0.1); transition: all 0.2s;">
+                                            💵 Doanh thu
+                                        </button>
+                                        <button id="btnChartModeOrders" type="button" onclick="setAdminChartMode('orders')" style="padding: 4px 10px; border-radius: 6px; border: none; background: transparent; color: var(--text-secondary); font-weight: 700; cursor: pointer; transition: all 0.2s;">
+                                            📦 Đơn hàng
+                                        </button>
+                                    </div>
+                                    <!-- Nút Xuất Báo Cáo Excel -->
+                                    <button type="button" id="btnExportExcel" onclick="exportAdminExcelReport()" style="background: #107C41; color: #FFFFFF; border: none; padding: 7px 12px; border-radius: 8px; font-size: 11.5px; font-weight: 800; cursor: pointer; display: inline-flex; align-items: center; gap: 6px; box-shadow: 0 2px 6px rgba(16,124,65,0.25); transition: transform 0.15s ease;" title="Xuất toàn bộ báo cáo doanh thu & đơn hàng ra file Excel .xlsx">
+                                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="8" y1="13" x2="16" y2="13"></line><line x1="8" y1="17" x2="16" y2="17"></line><polyline points="10 9 9 9 8 9"></polyline></svg>
+                                        📥 Xuất File Excel
+                                    </button>
+                                </div>
+                            </div>
+
+                            <!-- Chỉ số tóm tắt 7 ngày -->
+                            <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; background: var(--surface-variant); padding: 10px 12px; border-radius: 10px; border: 1px solid var(--divider);">
+                                <div>
+                                    <div style="font-size: 10px; color: var(--text-hint); font-weight: 700; text-transform: uppercase;">Tổng 7 ngày</div>
+                                    <div id="chartSummaryTotal" style="font-size: 12.5px; font-weight: 800; color: var(--price); margin-top: 2px;">0đ</div>
+                                </div>
+                                <div>
+                                    <div style="font-size: 10px; color: var(--text-hint); font-weight: 700; text-transform: uppercase;">Trung bình/ngày</div>
+                                    <div id="chartSummaryAvg" style="font-size: 12.5px; font-weight: 800; color: var(--primary); margin-top: 2px;">0đ</div>
+                                </div>
+                                <div>
+                                    <div style="font-size: 10px; color: var(--text-hint); font-weight: 700; text-transform: uppercase;">Ngày cao nhất</div>
+                                    <div id="chartSummaryPeak" style="font-size: 12.5px; font-weight: 800; color: #065F46; margin-top: 2px;">0đ</div>
+                                </div>
+                            </div>
+
+                            <!-- Khung chứa Biểu đồ cột -->
+                            <div style="position: relative; padding: 16px 8px 8px; background: #FFFDFB; border-radius: 12px; border: 1px solid var(--divider);">
+                                <div id="adminBarChart" style="height: 185px; display: flex; align-items: flex-end; justify-content: space-between; gap: 8px; padding-bottom: 24px; position: relative;">
+                                    <div style="width: 100%; text-align: center; color: var(--text-hint); font-size: 12px; align-self: center;">Đang tải dữ liệu biểu đồ...</div>
+                                </div>
+                            </div>
                         </div>
                     </div>
 
@@ -1953,14 +2058,45 @@
                         <div id="adminCategoriesContainer" style="display: flex; flex-direction: column; gap: 10px;"></div>
                     </div>
 
+                    <!-- ADMIN SECTION: COUPONS & VOUCHERS MANAGEMENT -->
+                    <div id="adminSecCoupons" class="admin-section">
+                        <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 8px;">
+                            <div style="display: flex; align-items: center; gap: 8px;">
+                                <button onclick="switchAdminTab('stats')" style="background: rgba(61, 35, 20, 0.08); border: 1px solid var(--divider); padding: 4px 10px; border-radius: 6px; font-size: 11px; font-weight: 700; color: var(--primary); cursor: pointer; display: flex; align-items: center; gap: 4px;" title="Quay về Dashboard">
+                                    ← Dashboard
+                                </button>
+                                <h4 style="font-size: 14px; font-weight: 800; color: var(--primary);">Quản Trị Mã Khuyến Mãi / Voucher (<span id="adminCouponsCountTotal">0</span>)</h4>
+                            </div>
+                            <div style="display: flex; gap: 8px; align-items: center;">
+                                <button onclick="loadAdminCoupons()" style="background: none; border: none; font-size: 12px; color: var(--accent); font-weight: 700; cursor: pointer;">Làm mới 🔄</button>
+                                <button onclick="openAdminCouponModal()" style="background: var(--primary); color: #fff; border: none; padding: 7px 14px; border-radius: 8px; font-size: 12px; font-weight: 700; cursor: pointer; box-shadow: 0 2px 6px rgba(61,35,20,0.2);">
+                                    ➕ Tạo Mã Mới
+                                </button>
+                            </div>
+                        </div>
+
+                        <!-- Danh sách Voucher hiển thị -->
+                        <div id="adminCouponsContainer" style="display: flex; flex-direction: column; gap: 10px;"></div>
+                    </div>
+
                     <!-- ADMIN SECTION 5: USERS MANAGEMENT -->
                     <div id="adminSecUsers" class="admin-section">
-                        <div style="display: flex; align-items: center; gap: 8px;">
-                            <button onclick="switchAdminTab('stats')" style="background: rgba(61, 35, 20, 0.08); border: 1px solid var(--divider); padding: 4px 10px; border-radius: 6px; font-size: 11px; font-weight: 700; color: var(--primary); cursor: pointer; display: flex; align-items: center; gap: 4px;" title="Quay về Dashboard">
-                                ← Dashboard
-                            </button>
-                            <h4 style="font-size: 14px; font-weight: 800; color: var(--primary);">Danh Sách Khách Hàng</h4>
+                        <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 8px;">
+                            <div style="display: flex; align-items: center; gap: 8px;">
+                                <button onclick="switchAdminTab('stats')" style="background: rgba(61, 35, 20, 0.08); border: 1px solid var(--divider); padding: 4px 10px; border-radius: 6px; font-size: 11px; font-weight: 700; color: var(--primary); cursor: pointer; display: flex; align-items: center; gap: 4px;" title="Quay về Dashboard">
+                                    ← Dashboard
+                                </button>
+                                <h4 style="font-size: 14px; font-weight: 800; color: var(--primary);">Quản Trị Khách Hàng (<span id="adminUsersCountTotal">0</span>)</h4>
+                            </div>
+                            <button onclick="clearAdminUserSearch(); loadAdminUsers();" style="background: none; border: none; font-size: 12px; color: var(--accent); font-weight: 700; cursor: pointer;">Làm mới 🔄</button>
                         </div>
+
+                        <!-- Ô tìm kiếm khách hàng -->
+                        <div style="margin-top: 4px; position: relative; display: flex; align-items: center;">
+                            <input type="text" id="adminUserSearchInput" class="form-input" placeholder="🔍 Tìm theo tên khách hàng, email hoặc số điện thoại..." oninput="handleAdminUserSearch(this.value)" autocomplete="off" style="padding-right: 36px;">
+                            <button type="button" onclick="clearAdminUserSearch()" title="Xóa bộ lọc tìm kiếm" style="position: absolute; right: 10px; background: none; border: none; color: var(--text-hint); font-size: 14px; cursor: pointer; padding: 4px;">✕</button>
+                        </div>
+
                         <div id="adminUsersContainer" style="display: flex; flex-direction: column; gap: 10px;"></div>
                     </div>
 
@@ -2395,7 +2531,7 @@
                         <span id="detailProdPrice" style="font-size: 18px; font-weight: 800; color: var(--price);">260.000đ</span>
                         <span id="detailProdOrigPrice" style="font-size: 12px; color: var(--text-hint); text-decoration: line-through;"></span>
                     </div>
-                    <p id="detailProdShortDesc" style="font-size: 12px; color: var(--text-secondary); line-height: 1.5; margin-top: 8px;"></p>
+                    <p id="detailProdShortDesc" style="font-size: 12.5px; color: var(--text-secondary); line-height: 1.6; margin-top: 8px; white-space: pre-line; word-break: break-word; max-height: 200px; overflow-y: auto; padding-right: 4px;"></p>
 
                     <div style="background: var(--surface-variant); border-radius: 12px; padding: 12px; margin-top: 12px; font-size: 11.5px; color: var(--text-secondary); line-height: 1.6;">
                         <div id="detailProdIngredients" style="margin-bottom: 6px;">🌿 <strong>Thành phần:</strong> Chiết xuất thực vật thuần chay.</div>
@@ -2469,8 +2605,8 @@
                             </div>
                         </div>
 
-                        <!-- 2. FORM VIẾT ĐÁNH GIÁ & TẢI ẢNH THỰC TẾ (CHỈ HIỂN THỊ KHI CHƯA ĐÁNH GIÁ) -->
-                        <div id="writeReviewCard" class="write-review-card">
+                        <!-- 2. FORM VIẾT ĐÁNH GIÁ (CHỈ HIỂN THỊ CHO KHÁCH ĐÃ MUA & NHẬN HÀNG THÀNH CÔNG) -->
+                        <div id="writeReviewCard" class="write-review-card" style="display: none;">
                             <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
                                 <div id="writeReviewTitle" style="font-size: 13px; font-weight: 800; color: var(--primary); display: flex; align-items: center; gap: 6px;">
                                     ✍️ Viết đánh giá của bạn
@@ -2533,6 +2669,7 @@
                 <div class="modal-sheet" onclick="event.stopPropagation()">
                     <button class="modal-close-btn" onclick="closeCheckoutModal()">✕</button>
                     <h3 style="font-size: 16px; font-weight: 800; color: var(--primary); margin-bottom: 14px;">Xác Nhận Đơn Hàng Moccoon</h3>
+                    <div id="chkProductsPreview" style="margin-bottom: 12px;"></div>
                     <form onsubmit="handleCheckoutSubmit(event)">
                         <!-- Chọn nhanh địa chỉ giao hàng đã lưu (Địa chỉ 1, 2, 3...) -->
                         <div id="checkoutSavedAddrBox" class="form-group" style="display: none;">
@@ -2553,8 +2690,13 @@
                             <input type="tel" id="chkReceiverPhone" class="form-input" required>
                         </div>
                         <div class="form-group">
-                            <label>Địa chỉ nhận hàng</label>
-                            <input type="text" id="chkShippingAddress" class="form-input" required>
+                            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px;">
+                                <label style="margin: 0;">Địa chỉ nhận hàng <span style="color: #E74C3C;">*</span></label>
+                                <button type="button" onclick="openMapPickerForCheckout()" style="background: var(--accent-light); border: 1px solid var(--accent); color: var(--accent); font-size: 11px; font-weight: 700; padding: 3px 8px; border-radius: 6px; cursor: pointer; display: flex; align-items: center; gap: 4px; transition: all 0.2s;">
+                                    🗺️ Chọn trên bản đồ
+                                </button>
+                            </div>
+                            <input type="text" id="chkShippingAddress" class="form-input" placeholder="Số nhà, tên đường, phường, quận..." required>
                         </div>
                         <div class="form-group">
                             <label>Phương thức thanh toán</label>
@@ -2567,10 +2709,46 @@
                             <label>Ghi chú đơn hàng (nếu có)</label>
                             <input type="text" id="chkNote" class="form-input" placeholder="Giao giờ hành chính, gọi trước...">
                         </div>
+
+                        <!-- MÃ GIẢM GIÁ / VOUCHER ƯU ĐÃI -->
+                        <div class="form-group" style="background: #FFFDF9; border: 1.5px solid var(--accent); border-radius: 14px; padding: 12px; box-shadow: var(--shadow-sm);">
+                            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
+                                <span style="font-size: 12px; font-weight: 800; color: var(--primary); display: flex; align-items: center; gap: 5px;">
+                                    🏷️ Mã Giảm Giá / Voucher
+                                </span>
+                                <button type="button" onclick="toggleAvailableCouponsList()" style="background: none; border: none; font-size: 11px; color: var(--accent); font-weight: 700; cursor: pointer; text-decoration: underline;">
+                                    Mã có sẵn ▾
+                                </button>
+                            </div>
+                            
+                            <div style="display: flex; gap: 8px;">
+                                <input type="text" id="chkCouponCode" placeholder="Nhập mã (VD: VEGAN30K)..." style="flex: 1; padding: 8px 12px; border: 1px solid var(--divider); border-radius: 10px; font-size: 12px; text-transform: uppercase; font-weight: 800; letter-spacing: 0.5px; outline: none; background: #fff;" onkeydown="if(event.key==='Enter'){event.preventDefault(); applyCheckoutCoupon();}">
+                                <button type="button" id="btnApplyCoupon" onclick="applyCheckoutCoupon()" style="padding: 8px 14px; background: var(--primary); color: #fff; border: none; border-radius: 10px; font-size: 11.5px; font-weight: 800; cursor: pointer; white-space: nowrap;">
+                                    Áp Dụng
+                                </button>
+                            </div>
+
+                            <!-- Thông báo kết quả áp dụng mã -->
+                            <div id="chkCouponResultBox" style="display: none; margin-top: 8px; padding: 8px 10px; background: #ECFDF5; border: 1px solid #10B981; border-radius: 8px; font-size: 11.5px; font-weight: 700; color: #065F46; align-items: center; justify-content: space-between;">
+                                <div id="chkCouponResultText" style="display: flex; align-items: center; gap: 4px;"></div>
+                                <button type="button" onclick="removeCheckoutCoupon()" style="background: none; border: none; color: #DC2626; font-size: 11.5px; cursor: pointer; font-weight: 800; padding: 2px 4px;" title="Gỡ mã giảm giá">✕ Gỡ</button>
+                            </div>
+
+                            <!-- Danh sách mã giảm giá gợi ý để khách bấm chọn nhanh -->
+                            <div id="chkAvailableCouponsBox" style="display: none; margin-top: 10px; padding-top: 8px; border-top: 1px dashed var(--divider); flex-direction: column; gap: 6px;">
+                                <div style="font-size: 10.5px; font-weight: 800; color: var(--text-hint); text-transform: uppercase;">Mã ưu đãi dành cho bạn:</div>
+                                <div id="chkAvailableCouponsList" style="display: flex; flex-direction: column; gap: 6px;"></div>
+                            </div>
+                        </div>
+
                         <div style="background: var(--surface-variant); border-radius: 12px; padding: 12px; margin-bottom: 14px; font-size: 12px;">
                             <div style="display: flex; justify-content: space-between; margin-bottom: 4px;">
                                 <span>Tiền hàng:</span>
                                 <strong id="chkSummaryAmount">0đ</strong>
+                            </div>
+                            <div id="chkRowDiscount" style="display: none; justify-content: space-between; margin-bottom: 4px; color: #059669; font-weight: 700;">
+                                <span>Giảm giá voucher:</span>
+                                <span id="chkDiscountAmount">-0đ</span>
                             </div>
                             <div style="display: flex; justify-content: space-between; margin-bottom: 4px;">
                                 <span>Phí vận chuyển:</span>
@@ -2661,8 +2839,11 @@
                         </div>
 
                         <div class="form-group">
-                            <label>Mô tả tóm tắt sản phẩm</label>
-                            <textarea id="adminProdDesc" class="form-input" style="height: 64px; resize: none;" placeholder="Công dụng nổi bật, thành phần thực vật thuần chay..."></textarea>
+                            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px;">
+                                <label style="margin: 0; font-weight: 700; color: var(--primary);">Mô tả chi tiết sản phẩm</label>
+                                <span id="adminProdDescCount" style="font-size: 11px; color: var(--text-hint); font-weight: 600;">0 / 10.000 ký tự</span>
+                            </div>
+                            <textarea id="adminProdDesc" class="form-input" maxlength="10000" style="min-height: 120px; line-height: 1.5; resize: vertical;" placeholder="Nhập mô tả chi tiết sản phẩm, công dụng, thành phần, hướng dẫn sử dụng... (Tối đa 10.000 ký tự)" oninput="updateAdminProdDescCount(this.value)"></textarea>
                         </div>
                     </div>
 
@@ -2704,6 +2885,84 @@
                         <textarea id="adminCatDesc" class="form-input" style="height: 60px; resize: none;" placeholder="Mô tả về nhóm sản phẩm này..."></textarea>
                     </div>
                     <button class="btn-auth-submit" onclick="saveAdminCategory()">Lưu Danh Mục Vào CSDL</button>
+                </div>
+            </div>
+
+            <!-- MODAL: ADD / CREATE COUPON VOUCHER -->
+            <div id="adminCouponModal" class="modal-overlay" onclick="closeAdminCouponModal(event)">
+                <div class="modal-sheet" onclick="event.stopPropagation()" style="display: flex; flex-direction: column; max-height: 90vh; padding: 0; overflow: hidden; border-radius: 24px 24px 0 0;">
+                    <!-- Header -->
+                    <div style="padding: 16px 20px; border-bottom: 1px solid var(--divider); display: flex; justify-content: space-between; align-items: center; background: #FFFFFF; flex-shrink: 0;">
+                        <div style="display: flex; align-items: center; gap: 8px;">
+                            <span style="font-size: 18px;">🎟️</span>
+                            <h3 style="font-size: 15.5px; font-weight: 800; color: var(--primary); margin: 0;">Tạo Mã Khuyến Mãi / Voucher Mới</h3>
+                        </div>
+                        <button type="button" class="modal-close-btn" onclick="closeAdminCouponModal()" style="position: static; font-size: 18px; width: 32px; height: 32px; border-radius: 50%; background: var(--surface-variant); border: none; cursor: pointer; display: flex; align-items: center; justify-content: center;">✕</button>
+                    </div>
+
+                    <!-- Body -->
+                    <div style="padding: 18px 20px; overflow-y: auto; flex: 1; display: flex; flex-direction: column; gap: 12px;">
+                        <div class="form-group">
+                            <label>Mã Voucher (Code) <span style="color: #E74C3C;">*</span></label>
+                            <input type="text" id="adminCpnCode" class="form-input" placeholder="Ví dụ: SALE50K, FREESHIP..." style="text-transform: uppercase; font-weight: 800; letter-spacing: 0.5px;">
+                        </div>
+
+                        <div class="form-group">
+                            <label>Tiêu đề chương trình <span style="color: #E74C3C;">*</span></label>
+                            <input type="text" id="adminCpnTitle" class="form-input" placeholder="Ví dụ: Giảm 50.000đ Đơn Đầu Tiên">
+                        </div>
+
+                        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
+                            <div class="form-group">
+                                <label>Loại giảm giá</label>
+                                <select id="adminCpnType" class="form-input" onchange="handleAdminCouponTypeChange(this.value)">
+                                    <option value="PERCENT">Phần trăm (%)</option>
+                                    <option value="FIXED">Số tiền cố định (đ)</option>
+                                </select>
+                            </div>
+                            <div class="form-group">
+                                <label id="lblCpnValue">Mức giảm (%) <span style="color: #E74C3C;">*</span></label>
+                                <input type="number" id="adminCpnValue" class="form-input" placeholder="Ví dụ: 10">
+                            </div>
+                        </div>
+
+                        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
+                            <div class="form-group" id="grpCpnMaxValue">
+                                <label>Giảm tối đa (đ)</label>
+                                <input type="number" id="adminCpnMaxValue" class="form-input" placeholder="Ví dụ: 50000">
+                            </div>
+                            <div class="form-group">
+                                <label>Đơn tối thiểu (đ)</label>
+                                <input type="number" id="adminCpnMinOrder" class="form-input" placeholder="Ví dụ: 200000" value="0">
+                            </div>
+                        </div>
+
+                        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
+                            <div class="form-group">
+                                <label>Số lượt sử dụng tối đa</label>
+                                <input type="number" id="adminCpnLimit" class="form-input" placeholder="Ví dụ: 100" value="100">
+                            </div>
+                            <div class="form-group">
+                                <label>Ngày kết thúc</label>
+                                <input type="date" id="adminCpnEndDate" class="form-input">
+                            </div>
+                        </div>
+
+                        <div class="form-group">
+                            <label>Mô tả chi tiết ưu đãi</label>
+                            <textarea id="adminCpnDesc" class="form-input" style="height: 60px; resize: none;" placeholder="Điều kiện áp dụng ưu đãi..."></textarea>
+                        </div>
+                    </div>
+
+                    <!-- Footer -->
+                    <div style="padding: 12px 20px; background: #FFFFFF; border-top: 1px solid var(--divider); display: flex; gap: 10px; flex-shrink: 0; box-shadow: 0 -4px 12px rgba(0,0,0,0.05);">
+                        <button type="button" onclick="closeAdminCouponModal()" style="background: var(--surface-variant); border: 1px solid var(--divider); color: var(--text-secondary); padding: 12px 16px; border-radius: 12px; font-size: 13px; font-weight: 700; cursor: pointer;">
+                            Đóng
+                        </button>
+                        <button type="button" id="btnSaveAdminCoupon" onclick="saveAdminCoupon()" class="btn-auth-submit" style="flex: 1; margin: 0; padding: 12px; font-size: 13.5px; font-weight: 800; display: flex; align-items: center; justify-content: center; gap: 6px;">
+                            💾 Lưu Mã Khuyến Mãi
+                        </button>
+                    </div>
                 </div>
             </div>
 
@@ -2794,6 +3053,38 @@
                             <input type="tel" id="newAddrPhone" class="form-input" placeholder="Ví dụ: 0912345678">
                         </div>
 
+                        <!-- BẢN ĐỒ CHỌN ĐỊA CHỈ TRỰC QUAN (LEAFLET + OPENSTREETMAP) -->
+                        <div style="background: var(--surface); border: 1.5px solid var(--divider); border-radius: 14px; overflow: hidden; padding: 12px; box-shadow: var(--shadow-sm);">
+                            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+                                <span style="font-size: 12px; font-weight: 800; color: var(--primary); display: flex; align-items: center; gap: 5px;">
+                                    🗺️ Chọn vị trí trên bản đồ
+                                </span>
+                                <div style="display: flex; gap: 6px;">
+                                    <button type="button" onclick="locateCurrentPosition()" style="background: var(--accent-light); border: 1px solid var(--accent); color: var(--accent); font-size: 11px; font-weight: 700; padding: 4px 8px; border-radius: 8px; cursor: pointer; display: flex; align-items: center; gap: 4px; transition: all 0.2s;">
+                                        🎯 Vị trí của tôi
+                                    </button>
+                                    <button type="button" onclick="openMapPickerForAddressBook()" style="background: #FFFFFF; border: 1px solid var(--divider); color: var(--primary); font-size: 11px; font-weight: 700; padding: 4px 8px; border-radius: 8px; cursor: pointer; display: flex; align-items: center; gap: 4px; transition: all 0.2s;" title="Mở bản đồ lớn">
+                                        🔍 Phóng to
+                                    </button>
+                                </div>
+                            </div>
+
+                            <!-- Thanh tìm kiếm nhanh địa danh / địa chỉ -->
+                            <div style="display: flex; gap: 6px; margin-bottom: 8px;">
+                                <input type="text" id="mapSearchInput" placeholder="Tìm theo đường, phường, quận/huyện..." style="flex: 1; padding: 7px 12px; border: 1px solid var(--divider); border-radius: 8px; font-size: 12px; outline: none; background: #fff;" onkeydown="if(event.key==='Enter'){event.preventDefault(); searchLocationOnMap();}">
+                                <button type="button" onclick="searchLocationOnMap()" style="padding: 7px 12px; background: var(--primary); color: #fff; border: none; border-radius: 8px; font-size: 11.5px; font-weight: 700; cursor: pointer;">
+                                    🔍 Tìm
+                                </button>
+                            </div>
+
+                            <!-- Khung chứa Leaflet Map -->
+                            <div id="addressPickerMap" style="height: 190px; width: 100%; border-radius: 10px; border: 1px solid var(--divider); z-index: 1;"></div>
+                            
+                            <div style="font-size: 10.5px; color: var(--text-hint); margin-top: 6px; text-align: center;">
+                                💡 <i>Nhấp hoặc kéo ghim trên bản đồ để tự động điền địa chỉ giao hàng bên dưới</i>
+                            </div>
+                        </div>
+
                         <div class="form-group">
                             <label>Địa chỉ nhận hàng chi tiết <span style="color: #E74C3C;">*</span></label>
                             <textarea id="newAddrLine" class="form-input" style="height: 75px; resize: none;" placeholder="Số nhà, tên đường, tòa nhà, phường/xã, quận/huyện, tỉnh/thành phố..."></textarea>
@@ -2815,6 +3106,65 @@
                         <button type="button" id="btnSubmitNewAddr" onclick="submitNewAddress()" class="btn-auth-submit" style="flex: 1; margin: 0; padding: 12px; font-size: 13.5px; font-weight: 800; display: flex; align-items: center; justify-content: center; gap: 6px;">
                             💾 Lưu Địa Chỉ Vào CSDL
                         </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- MODAL: BẢN ĐỒ TƯƠNG TÁC CHỌN ĐỊA CHỈ (DÙNG CHUNG CHO CHECKOUT & SỔ ĐỊA CHỈ) -->
+            <div id="mapPickerModal" class="modal-overlay" style="z-index: 99999;" onclick="closeMapPickerModal(event)">
+                <div class="modal-sheet" onclick="event.stopPropagation()" style="display: flex; flex-direction: column; max-height: 90vh; height: 560px; padding: 0; overflow: hidden; border-radius: 24px 24px 0 0;">
+                    <!-- Header -->
+                    <div style="padding: 14px 18px; border-bottom: 1px solid var(--divider); display: flex; justify-content: space-between; align-items: center; background: #FFFFFF; flex-shrink: 0;">
+                        <div style="display: flex; align-items: center; gap: 8px;">
+                            <span style="font-size: 20px;">🗺️</span>
+                            <div>
+                                <h3 style="font-size: 15px; font-weight: 800; color: var(--primary); margin: 0;">Chọn Địa Chỉ Trên Bản Đồ</h3>
+                                <p style="font-size: 11px; color: var(--text-hint); margin: 0;">Tìm kiếm hoặc chạm vị trí để lấy địa chỉ</p>
+                            </div>
+                        </div>
+                        <button type="button" class="modal-close-btn" onclick="closeMapPickerModal()" style="position: static; font-size: 18px; width: 32px; height: 32px; border-radius: 50%; background: var(--surface-variant); border: none; cursor: pointer; display: flex; align-items: center; justify-content: center;">✕</button>
+                    </div>
+
+                    <!-- Search Toolbar -->
+                    <div style="padding: 10px 16px; background: #FFFDF9; border-bottom: 1px solid var(--divider); display: flex; gap: 8px; align-items: center; flex-shrink: 0;">
+                        <div style="flex: 1; position: relative; display: flex; align-items: center;">
+                            <span style="position: absolute; left: 10px; font-size: 13px; color: var(--text-hint);">🔍</span>
+                            <input type="text" id="universalMapSearch" placeholder="Nhập tên đường, tòa nhà, phường, quận..." style="width: 100%; padding: 9px 12px 9px 32px; border: 1.5px solid var(--divider); border-radius: 10px; font-size: 12.5px; outline: none; background: #fff;" onkeydown="if(event.key==='Enter'){event.preventDefault(); executeUniversalMapSearch();}">
+                        </div>
+                        <button type="button" onclick="executeUniversalMapSearch()" style="padding: 9px 14px; background: var(--primary); color: #fff; border: none; border-radius: 10px; font-size: 12px; font-weight: 700; cursor: pointer; flex-shrink: 0;">
+                            Tìm Kiếm
+                        </button>
+                        <button type="button" onclick="locateUniversalMapPosition()" title="Lấy vị trí GPS hiện tại" style="padding: 9px 10px; background: var(--accent-light); border: 1px solid var(--accent); color: var(--accent); border-radius: 10px; font-size: 13px; cursor: pointer; flex-shrink: 0;">
+                            🎯
+                        </button>
+                    </div>
+
+                    <!-- Map View -->
+                    <div style="flex: 1; position: relative; width: 100%; min-height: 260px; background: #E5E7EB;">
+                        <div id="universalLeafletMap" style="width: 100%; height: 100%; z-index: 1;"></div>
+                        <!-- Floating Instruction Tag -->
+                        <div style="position: absolute; top: 10px; left: 50%; transform: translateX(-50%); background: rgba(46, 27, 15, 0.88); color: #fff; padding: 5px 12px; border-radius: 20px; font-size: 11px; font-weight: 600; pointer-events: none; z-index: 1000; box-shadow: 0 4px 10px rgba(0,0,0,0.25); white-space: nowrap; backdrop-filter: blur(8px);">
+                            👉 Chạm hoặc kéo ghim để đổi vị trí
+                        </div>
+                    </div>
+
+                    <!-- Selected Address Preview & Confirm Bar -->
+                    <div style="padding: 14px 18px; background: #FFFFFF; border-top: 1px solid var(--divider); display: flex; flex-direction: column; gap: 10px; flex-shrink: 0; box-shadow: 0 -4px 16px rgba(0,0,0,0.06);">
+                        <div style="background: var(--surface-variant); border-left: 3px solid var(--accent); border-radius: 8px; padding: 8px 12px;">
+                            <div style="font-size: 10.5px; font-weight: 700; color: var(--text-hint); text-transform: uppercase;">📍 Địa chỉ được chọn:</div>
+                            <div id="universalMapPickedAddress" style="font-size: 12.5px; font-weight: 700; color: var(--text-primary); margin-top: 2px; line-height: 1.4; word-break: break-word;">
+                                Đang tải vị trí bản đồ...
+                            </div>
+                        </div>
+
+                        <div style="display: flex; gap: 8px;">
+                            <button type="button" onclick="closeMapPickerModal()" style="padding: 11px 16px; background: var(--surface-variant); border: 1px solid var(--divider); color: var(--text-secondary); border-radius: 12px; font-size: 13px; font-weight: 700; cursor: pointer;">
+                                Đóng
+                            </button>
+                            <button type="button" id="btnConfirmUniversalMap" onclick="confirmUniversalMapAddress()" class="btn-auth-submit" style="flex: 1; margin: 0; padding: 11px; font-size: 13.5px; font-weight: 800; display: flex; align-items: center; justify-content: center; gap: 6px;">
+                                ✅ Xác Nhận Dùng Địa Chỉ Này
+                            </button>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -3168,12 +3518,42 @@
         return new Intl.NumberFormat('vi-VN').format(n || 0) + 'đ';
     }
 
-    function showToast(msg) {
+    function showToast(msg, type = 'info', duration = 2800) {
         const toast = document.getElementById('toast');
-        toast.innerText = msg;
-        toast.classList.add('show');
-        setTimeout(() => toast.classList.remove('show'), 2200);
+        if (!toast) return;
+
+        if (toast._timer) clearTimeout(toast._timer);
+
+        // Chuẩn hóa văn bản, lược bỏ các khoảng xuống dòng thừa
+        const cleanMsg = String(msg)
+            .replace(/🎉\s*CHÚC MỪNG!\s*/g, '🎉 ')
+            .replace(/\n\n+/g, ' • ')
+            .replace(/\n/g, ' • ');
+
+        toast.innerHTML = cleanMsg;
+        toast.className = 'toast-popup show ' + type;
+
+        toast._timer = setTimeout(() => {
+            toast.classList.remove('show');
+            setTimeout(() => {
+                toast.className = 'toast-popup';
+            }, 350);
+        }, duration);
     }
+
+    // Thay thế triệt để hộp thoại cảnh báo mặc định của trình duyệt để app chạy êm ái, mượt mà
+    window.alert = function(msg) {
+        const str = String(msg || '');
+        let type = 'info';
+        if (str.includes('Lỗi') || str.includes('thất bại') || str.includes('Không thể') || str.includes('chưa khớp') || str.includes('sai')) {
+            type = 'error';
+        } else if (str.includes('Vui lòng') || str.includes('chưa đạt') || str.includes('Cảnh báo')) {
+            type = 'warning';
+        } else if (str.includes('thành công') || str.includes('CHÚC MỪNG') || str.includes('🎉')) {
+            type = 'success';
+        }
+        showToast(msg, type, 3200);
+    };
 
     function toggleDesktopMode() {
         isDesktopMode = !isDesktopMode;
@@ -3306,13 +3686,141 @@
                 currentUser = data.data.user;
                 localStorage.setItem('moccoon_token', currentToken);
                 localStorage.setItem('moccoon_user', JSON.stringify(currentUser));
+                showToast('🎉 Đăng nhập thành công!', 'success');
                 applyRoleNavigation();
             } else {
-                alert('Đăng nhập thất bại: ' + (data.message || 'Sai thông tin'));
+                showToast(data.message || 'Sai thông tin đăng nhập', 'error');
             }
         } catch (err) {
             console.error(err);
-            alert('Lỗi kết nối máy chủ SQL Server!');
+            showToast('Lỗi kết nối máy chủ SQL Server!', 'error');
+        }
+    }
+
+    function checkPasswordStrengthScore(pwd) {
+        if (!pwd) {
+            return { score: 0, text: 'Chưa nhập', bg: '#E5E7EB', color: '#6B7280', tip: 'Vui lòng nhập mật khẩu tối thiểu 8 ký tự.', isValid: false };
+        }
+        if (pwd.length < 8) {
+            return { 
+                score: 1, 
+                text: 'Rất yếu (< 8 ký tự)', 
+                bg: '#FEE2E2', 
+                color: '#DC2626', 
+                tip: `⚠️ Mật khẩu hiện có ${pwd.length} ký tự. Cần thêm ít nhất ${8 - pwd.length} ký tự nữa để đạt độ dài tối thiểu 8 ký tự.`, 
+                isValid: false 
+            };
+        }
+
+        let types = 0;
+        const hasLower = /[a-z]/.test(pwd);
+        const hasUpper = /[A-Z]/.test(pwd);
+        const hasDigit = /[0-9]/.test(pwd);
+        const hasSpecial = /[^a-zA-Z0-9]/.test(pwd);
+
+        if (hasLower) types++;
+        if (hasUpper) types++;
+        if (hasDigit) types++;
+        if (hasSpecial) types++;
+
+        if (types === 1) {
+            return {
+                score: 1,
+                text: 'Yếu (Chưa đạt)',
+                bg: '#FEE2E2',
+                color: '#DC2626',
+                tip: '⚠️ Mật khẩu chỉ có 1 dạng ký tự. Hãy kết hợp thêm số hoặc chữ hoa/chữ thường để đạt mức <b>Khá</b>.',
+                isValid: false
+            };
+        } else if (types === 2) {
+            return {
+                score: 2,
+                text: 'Khá (Đạt yêu cầu ✔)',
+                bg: '#FEF3C7',
+                color: '#D97706',
+                tip: '✔ <b>Độ mạnh đạt mức Khá:</b> Đủ tiêu chuẩn đăng ký tài khoản an toàn.',
+                isValid: true
+            };
+        } else if (types === 3) {
+            return {
+                score: 3,
+                text: 'Mạnh (Tốt ★)',
+                bg: '#D1FAE5',
+                color: '#059669',
+                tip: '★ <b>Độ mạnh đạt mức Mạnh:</b> Rất bảo mật và an toàn cao.',
+                isValid: true
+            };
+        } else {
+            return {
+                score: 4,
+                text: 'Rất mạnh (Tối ưu ★★★)',
+                bg: '#ECFDF5',
+                color: '#047857',
+                tip: '★★★ <b>Mật khẩu xuất sắc:</b> Kết hợp đầy đủ chữ hoa, thường, số và ký tự đặc biệt!',
+                isValid: true
+            };
+        }
+    }
+
+    function onRegisterPasswordInput() {
+        const pwdInput = document.getElementById('regPassword');
+        const pwd = pwdInput ? pwdInput.value : '';
+        const result = checkPasswordStrengthScore(pwd);
+        
+        const badge = document.getElementById('pwdStrengthBadge');
+        const tip = document.getElementById('pwdTipText');
+        const bar1 = document.getElementById('pwdBar1');
+        const bar2 = document.getElementById('pwdBar2');
+        const bar3 = document.getElementById('pwdBar3');
+        const bar4 = document.getElementById('pwdBar4');
+
+        if (badge) {
+            badge.innerText = result.text;
+            badge.style.background = result.bg;
+            badge.style.color = result.color;
+        }
+        if (tip) {
+            tip.innerHTML = result.tip;
+            tip.style.color = result.score >= 2 ? '#047857' : (result.score === 1 ? '#DC2626' : '#78716C');
+        }
+
+        const colors = {
+            0: '#E5E7EB',
+            1: '#EF4444',
+            2: '#F59E0B',
+            3: '#10B981',
+            4: '#059669'
+        };
+        const activeColor = colors[result.score] || '#E5E7EB';
+        if (bar1) bar1.style.background = result.score >= 1 ? activeColor : '#E5E7EB';
+        if (bar2) bar2.style.background = result.score >= 2 ? activeColor : '#E5E7EB';
+        if (bar3) bar3.style.background = result.score >= 3 ? activeColor : '#E5E7EB';
+        if (bar4) bar4.style.background = result.score >= 4 ? activeColor : '#E5E7EB';
+
+        onRegisterConfirmPasswordInput();
+    }
+
+    function onRegisterConfirmPasswordInput() {
+        const pwdInput = document.getElementById('regPassword');
+        const confirmInput = document.getElementById('regConfirmPassword');
+        const msg = document.getElementById('pwdMatchStatus');
+        if (!pwdInput || !confirmInput || !msg) return;
+
+        const pwd = pwdInput.value;
+        const confirm = confirmInput.value;
+
+        if (!confirm) {
+            msg.style.display = 'none';
+            return;
+        }
+
+        msg.style.display = 'block';
+        if (pwd === confirm) {
+            msg.innerHTML = '✔ Mật khẩu xác nhận trùng khớp';
+            msg.style.color = '#059669';
+        } else {
+            msg.innerHTML = '✕ Mật khẩu xác nhận chưa khớp với mật khẩu đã nhập';
+            msg.style.color = '#DC2626';
         }
     }
 
@@ -3321,21 +3829,31 @@
         const full_name = document.getElementById('regFullName').value.trim();
         const email = document.getElementById('regEmail').value.trim();
         const phone = document.getElementById('regPhone').value.trim();
-        const address = document.getElementById('regAddress').value.trim();
         const password = document.getElementById('regPassword').value;
+        const confirmPassword = document.getElementById('regConfirmPassword').value;
 
         if (!full_name || !password || (!email && !phone)) {
-            alert('Vui lòng điền họ tên, mật khẩu và ít nhất email hoặc số điện thoại.');
+            showToast('Vui lòng điền họ tên, mật khẩu và ít nhất email hoặc số điện thoại.', 'warning');
             return;
         }
 
-        if (password.length < 6) {
-            alert('Mật khẩu phải có độ dài ít nhất 6 ký tự.');
+        // 1. Kiểm tra xác nhận mật khẩu
+        if (password !== confirmPassword) {
+            showToast('Mật khẩu xác nhận không trùng khớp! Vui lòng nhập lại chính xác.', 'error');
+            document.getElementById('regConfirmPassword').focus();
+            return;
+        }
+
+        // 2. Kiểm tra độ mạnh mật khẩu (phải từ mức Khá trở lên)
+        const strength = checkPasswordStrengthScore(password);
+        if (!strength.isValid) {
+            showToast('Mật khẩu chưa đạt mức Khá trở lên (tối thiểu 8 ký tự, gồm chữ và số).', 'warning');
+            document.getElementById('regPassword').focus();
             return;
         }
 
         try {
-            showToast('Đang tạo tài khoản khách hàng...');
+            showToast('Đang tạo tài khoản khách hàng...', 'info');
             const res = await fetch('/api/auth/register', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
@@ -3343,7 +3861,6 @@
                     full_name,
                     email,
                     phone,
-                    address,
                     password
                 })
             });
@@ -3359,15 +3876,15 @@
                 document.getElementById('loginAccount').value = email || phone;
                 document.getElementById('loginPassword').value = password;
 
-                showToast('🎉 Đăng ký tài khoản thành công!');
-                alert(`🎉 CHÚC MỪNG!\nBạn đã tạo tài khoản Khách hàng Moccoon thành công!\n\nTài khoản đăng nhập: ${email || phone}\nMật khẩu: ${password}\n\nHệ thống sẽ tự động đưa bạn vào Cửa Hàng.`);
+                showToast('🎉 Đăng ký thành công! Đang chuyển vào Cửa Hàng...', 'success');
+                // Tự động chuyển thẳng vào app mượt mà, không gián đoạn
                 applyRoleNavigation();
             } else {
-                alert('Đăng ký không thành công: ' + (data.message || 'Lỗi đăng ký'));
+                showToast(data.message || 'Lỗi đăng ký tài khoản', 'error');
             }
         } catch (err) {
             console.error('handleRegisterSubmit error:', err);
-            alert('Lỗi kết nối máy chủ SQL Server khi đăng ký!');
+            showToast('Lỗi kết nối máy chủ SQL Server khi đăng ký!', 'error');
         }
     }
 
@@ -3400,6 +3917,8 @@
         loadAdminOrders();
         loadAdminProducts();
         loadAdminCategories();
+        loadAdminCoupons();
+        loadAdminUsers();
         initAdminSocket();
     }
 
@@ -3503,6 +4022,13 @@
             sec.style.display = 'flex';
             if (subTitleEl) subTitleEl.innerText = '🏷️ QUẢN TRỊ DANH MỤC (Nhấn về Dashboard)';
             loadAdminCategories();
+        } else if (tab === 'coupons') {
+            document.getElementById('navAdminCoupons').classList.add('active');
+            const sec = document.getElementById('adminSecCoupons');
+            sec.classList.add('active');
+            sec.style.display = 'flex';
+            if (subTitleEl) subTitleEl.innerText = '🎟️ QUẢN TRỊ KHUYẾN MÃI (Nhấn về Dashboard)';
+            loadAdminCoupons();
         } else if (tab === 'users') {
             document.getElementById('navAdminUsers').classList.add('active');
             const sec = document.getElementById('adminSecUsers');
@@ -3520,7 +4046,10 @@
         }
     }
 
-    // 1. STATS
+    // 1. STATS & ANALYTICS BAR CHART
+    let adminLastDashboardData = null;
+    let adminChartMode = 'revenue'; // 'revenue' hoặc 'orders'
+
     async function loadAdminStats() {
         if (!currentToken) return;
         try {
@@ -3530,24 +4059,243 @@
             const data = await res.json();
             if (data.success) {
                 const d = data.data;
+                adminLastDashboardData = d;
                 document.getElementById('kpiRevenueToday').innerText = formatVND(d.revenue.revenue_today);
                 document.getElementById('kpiRevenueMonth').innerText = formatVND(d.revenue.revenue_this_month);
                 document.getElementById('kpiPendingOrders').innerText = d.orders.pending_orders || 0;
                 document.getElementById('adminPendingCount').innerText = d.orders.pending_orders || 0;
                 document.getElementById('kpiTotalCustomers').innerText = d.customers.total_customers || 0;
 
-                const topList = document.getElementById('adminTopProductsList');
-                if (d.top_products && d.top_products.length > 0) {
-                    topList.innerHTML = d.top_products.map(p => `
-                        <div style="display: flex; justify-content: space-between; align-items: center; padding: 8px 10px; background: var(--surface-variant); border-radius: 8px; font-size: 12px;">
-                            <span style="font-weight: 700; color: var(--text-primary);">${p.name}</span>
-                            <span style="font-weight: 800; color: var(--price);">Đã bán: ${p.total_sold}</span>
-                        </div>
-                    `).join('');
+                // Render biểu đồ cột 7 ngày gần nhất
+                if (d.chart_data) {
+                    renderAdminBarChart(d.chart_data);
                 }
             }
         } catch (e) {
             console.error('loadAdminStats error:', e);
+        }
+    }
+
+    function setAdminChartMode(mode) {
+        adminChartMode = mode;
+        const btnRev = document.getElementById('btnChartModeRevenue');
+        const btnOrd = document.getElementById('btnChartModeOrders');
+        if (btnRev && btnOrd) {
+            if (mode === 'revenue') {
+                btnRev.style.background = '#FFFFFF';
+                btnRev.style.color = 'var(--primary)';
+                btnRev.style.fontWeight = '800';
+                btnRev.style.boxShadow = '0 1px 3px rgba(0,0,0,0.1)';
+
+                btnOrd.style.background = 'transparent';
+                btnOrd.style.color = 'var(--text-secondary)';
+                btnOrd.style.fontWeight = '700';
+                btnOrd.style.boxShadow = 'none';
+            } else {
+                btnOrd.style.background = '#FFFFFF';
+                btnOrd.style.color = 'var(--primary)';
+                btnOrd.style.fontWeight = '800';
+                btnOrd.style.boxShadow = '0 1px 3px rgba(0,0,0,0.1)';
+
+                btnRev.style.background = 'transparent';
+                btnRev.style.color = 'var(--text-secondary)';
+                btnRev.style.fontWeight = '700';
+                btnRev.style.boxShadow = 'none';
+            }
+        }
+        if (adminLastDashboardData && adminLastDashboardData.chart_data) {
+            renderAdminBarChart(adminLastDashboardData.chart_data);
+        }
+    }
+
+    function renderAdminBarChart(chartData) {
+        const container = document.getElementById('adminBarChart');
+        if (!container) return;
+
+        if (!chartData || chartData.length === 0) {
+            container.innerHTML = '<div style="width: 100%; text-align: center; color: var(--text-hint); font-size: 12px; align-self: center;">Chưa có dữ liệu 7 ngày gần nhất.</div>';
+            return;
+        }
+
+        const isRevenue = adminChartMode === 'revenue';
+        const values = chartData.map(it => isRevenue ? (it.revenue || 0) : (it.order_count || 0));
+        const total = values.reduce((sum, v) => sum + v, 0);
+        const avg = Math.round(total / (values.length || 1));
+        const maxVal = Math.max(...values, isRevenue ? 100000 : 5);
+
+        // Tìm ngày đạt đỉnh
+        let peakIdx = 0;
+        let peakVal = values[0];
+        for (let i = 1; i < values.length; i++) {
+            if (values[i] > peakVal) {
+                peakVal = values[i];
+                peakIdx = i;
+            }
+        }
+
+        // Cập nhật 3 chỉ số tóm tắt
+        const totalEl = document.getElementById('chartSummaryTotal');
+        const avgEl = document.getElementById('chartSummaryAvg');
+        const peakEl = document.getElementById('chartSummaryPeak');
+        if (totalEl) totalEl.innerText = isRevenue ? formatVND(total) : `${total} đơn`;
+        if (avgEl) avgEl.innerText = isRevenue ? formatVND(avg) : `${avg} đơn/ngày`;
+        if (peakEl) {
+            const peakDate = chartData[peakIdx]?.date_label || '';
+            peakEl.innerText = isRevenue ? `${formatVND(peakVal)} (${peakDate.slice(0, 5)})` : `${peakVal} đơn (${peakDate.slice(0, 5)})`;
+        }
+
+        // Vẽ các thanh cột biểu đồ
+        container.innerHTML = chartData.map((it, idx) => {
+            const val = isRevenue ? (it.revenue || 0) : (it.order_count || 0);
+            const isPeak = (val > 0 && idx === peakIdx);
+            // Chiều cao thanh cột từ 6% đến 92%
+            const heightPercent = val === 0 ? 5 : Math.max(12, Math.min(92, Math.round((val / maxVal) * 92)));
+
+            // Nhãn hiển thị trên đỉnh thanh cột
+            let labelTop = '';
+            if (val === 0) {
+                labelTop = '0';
+            } else if (isRevenue) {
+                if (val >= 1000000) {
+                    labelTop = (val / 1000000).toFixed(1).replace('.0', '') + 'tr';
+                } else if (val >= 1000) {
+                    labelTop = Math.round(val / 1000) + 'k';
+                } else {
+                    labelTop = val + 'đ';
+                }
+            } else {
+                labelTop = val + ' đơn';
+            }
+
+            const shortDate = (it.date_label || '').slice(0, 5); // Lấy DD/MM
+            const barBg = isPeak 
+                ? 'linear-gradient(180deg, #F59E0B 0%, #B45309 100%)' 
+                : (val > 0 ? 'linear-gradient(180deg, #C68642 0%, #3D2314 100%)' : '#EAE3D9');
+            const shadow = val > 0 ? '0 2px 8px rgba(61,35,20,0.18)' : 'none';
+
+            return `
+                <div style="flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: flex-end; height: 100%; position: relative; min-width: 0;" 
+                     title="Ngày: ${it.date_label}&#10;Doanh thu: ${formatVND(it.revenue || 0)}&#10;Số đơn: ${it.order_count || 0} đơn">
+                    <!-- Giá trị trên đỉnh cột -->
+                    <span style="font-size: 9.5px; font-weight: 800; color: ${isPeak ? '#B45309' : (val > 0 ? 'var(--primary)' : 'var(--text-hint)')}; margin-bottom: 5px; white-space: nowrap;">
+                        ${labelTop}
+                    </span>
+
+                    <!-- Thân cột biểu đồ -->
+                    <div style="width: 80%; max-width: 34px; height: ${heightPercent}%; background: ${barBg}; border-radius: 6px 6px 2px 2px; box-shadow: ${shadow}; transition: height 0.4s ease, transform 0.2s; cursor: pointer;"
+                         onmouseover="this.style.transform='scaleY(1.05)'" onmouseout="this.style.transform='scaleY(1)'">
+                    </div>
+
+                    <!-- Ngày tháng ở chân cột -->
+                    <span style="font-size: 10px; font-weight: 700; color: ${isPeak ? 'var(--primary)' : 'var(--text-hint)'}; margin-top: 6px; white-space: nowrap; position: absolute; bottom: 0;">
+                        ${shortDate}
+                    </span>
+                </div>
+            `;
+        }).join('');
+    }
+
+    async function exportAdminExcelReport() {
+        const btn = document.getElementById('btnExportExcel');
+        const origText = btn ? btn.innerHTML : '';
+        try {
+            if (btn) {
+                btn.disabled = true;
+                btn.innerHTML = '⏳ Đang xuất...';
+            }
+            showToast('Đang tạo và tải file Excel báo cáo...');
+
+            const res = await fetch('/api/admin/export-excel', {
+                headers: {
+                    'Authorization': 'Bearer ' + currentToken
+                }
+            });
+
+            if (!res.ok) {
+                throw new Error('Lỗi từ máy chủ (' + res.status + ')');
+            }
+
+            const blob = await res.blob();
+            const url = window.URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            const nowStr = new Date().toISOString().slice(0, 10).replace(/-/g, '');
+            a.download = `Bao_Cao_Doanh_Thu_Moccoon_${nowStr}.xlsx`;
+            document.body.appendChild(a);
+            a.click();
+            a.remove();
+            window.URL.revokeObjectURL(url);
+            showToast('✓ Xuất file Excel báo cáo thành công!');
+        } catch (e) {
+            console.warn('Backend export error, fallback to client SheetJS:', e);
+            exportAdminExcelClientFallback();
+        } finally {
+            if (btn) {
+                btn.disabled = false;
+                btn.innerHTML = origText;
+            }
+        }
+    }
+
+    function exportAdminExcelClientFallback() {
+        if (typeof XLSX === 'undefined') {
+            alert('Không thể xuất file Excel. Vui lòng kiểm tra lại kết nối!');
+            return;
+        }
+        try {
+            showToast('Đang xuất file Excel từ trình duyệt...');
+            const wb = XLSX.utils.book_new();
+
+            // Sheet 1: Tổng quan
+            const revToday = document.getElementById('kpiRevenueToday')?.innerText || '0đ';
+            const revMonth = document.getElementById('kpiRevenueMonth')?.innerText || '0đ';
+            const pending = document.getElementById('kpiPendingOrders')?.innerText || '0';
+            const customers = document.getElementById('kpiTotalCustomers')?.innerText || '0';
+
+            const summaryData = [
+                { 'Chỉ Số Thống Kê': 'Thời gian xuất báo cáo', 'Giá Trị': new Date().toLocaleString('vi-VN') },
+                { 'Chỉ Số Thống Kê': 'Doanh thu hôm nay', 'Giá Trị': revToday },
+                { 'Chỉ Số Thống Kê': 'Doanh thu tháng này', 'Giá Trị': revMonth },
+                { 'Chỉ Số Thống Kê': 'Đơn hàng chờ xử lý', 'Giá Trị': pending },
+                { 'Chỉ Số Thống Kê': 'Tổng khách hàng đăng ký', 'Giá Trị': customers }
+            ];
+            const wsSummary = XLSX.utils.json_to_sheet(summaryData);
+            XLSX.utils.book_append_sheet(wb, wsSummary, 'Tổng Quan');
+
+            // Sheet 2: Doanh thu 7 ngày
+            if (adminLastDashboardData && adminLastDashboardData.chart_data) {
+                const chartExport = adminLastDashboardData.chart_data.map(it => ({
+                    'Ngày': it.date_label,
+                    'Doanh Thu (VNĐ)': it.revenue,
+                    'Số Lượng Đơn': it.order_count
+                }));
+                const wsChart = XLSX.utils.json_to_sheet(chartExport);
+                XLSX.utils.book_append_sheet(wb, wsChart, 'Doanh Thu 7 Ngày');
+            }
+
+            // Sheet 3: Danh sách đơn hàng
+            if (adminOrdersList && adminOrdersList.length > 0) {
+                const ordersExport = adminOrdersList.map(o => ({
+                    'Mã Đơn': o.order_code,
+                    'Ngày Đặt': o.created_at ? new Date(o.created_at).toLocaleString('vi-VN') : '',
+                    'Người Nhận': o.receiver_name,
+                    'Số Điện Thoại': o.receiver_phone,
+                    'Địa Chỉ': o.shipping_address,
+                    'Hình Thức': o.payment_method,
+                    'Thanh Toán': o.payment_status === 'PAID' ? 'Đã thanh toán' : 'Chưa thanh toán',
+                    'Trạng Thái': o.order_status,
+                    'Tổng Tiền (VNĐ)': o.final_amount
+                }));
+                const wsOrders = XLSX.utils.json_to_sheet(ordersExport);
+                XLSX.utils.book_append_sheet(wb, wsOrders, 'Danh Sách Đơn Hàng');
+            }
+
+            const nowStr = new Date().toISOString().slice(0, 10).replace(/-/g, '');
+            XLSX.writeFile(wb, `Bao_Cao_Doanh_Thu_Moccoon_${nowStr}.xlsx`);
+            showToast('✓ Đã xuất file Excel thành công!');
+        } catch (err) {
+            console.error('Client excel export error:', err);
+            alert('Lỗi xuất file Excel: ' + err.message);
         }
     }
 
@@ -3741,7 +4489,10 @@
                     <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 10px; padding-top: 10px; border-top: 1px solid var(--divider);">
                         <div>
                             <span style="font-size: 10.5px; color: var(--text-hint);">${paymentMap[o.payment_method] || o.payment_method}:</span>
-                            <div style="font-size: 15px; font-weight: 800; color: var(--price);">${formatVND(o.final_amount)}</div>
+                            <div style="font-size: 15px; font-weight: 800; color: var(--price); display: flex; align-items: center; gap: 6px; flex-wrap: wrap;">
+                                ${formatVND(o.final_amount)}
+                                ${o.discount_amount > 0 ? `<span style="background: #ECFDF5; color: #065F46; padding: 2px 6px; border-radius: 6px; font-size: 10px; font-weight: 800; border: 1px solid #A7F3D0;">🏷️ -${formatVND(o.discount_amount)} (${o.coupon_code || 'Voucher'})</span>` : ''}
+                            </div>
                         </div>
                         <span style="font-size: 10px; padding: 3px 8px; border-radius: 6px; font-weight: 700; ${o.payment_status === 'PAID' ? 'background: #D1FAE5; color: #065F46;' : 'background: #FEF3C7; color: #92400E;'}">
                             ${o.payment_status === 'PAID' ? '✓ Đã thanh toán' : '⏳ Chưa thanh toán'}
@@ -3953,6 +4704,21 @@
         }
     }
 
+    function updateAdminProdDescCount(val) {
+        const counter = document.getElementById('adminProdDescCount');
+        if (counter) {
+            const len = (val || '').length;
+            counter.innerText = `${len.toLocaleString('vi-VN')} / 10.000 ký tự`;
+            if (len >= 9500) {
+                counter.style.color = '#DC2626';
+            } else if (len >= 8000) {
+                counter.style.color = '#D97706';
+            } else {
+                counter.style.color = 'var(--text-hint)';
+            }
+        }
+    }
+
     async function openAdminProductModal(pId) {
         // Luôn cập nhật danh mục mới nhất từ CSDL SQL Server
         await loadAdminCategories();
@@ -3985,6 +4751,7 @@
             document.getElementById('adminProdSkinType').value = 'Mọi loại da';
             document.getElementById('adminProdImage').value = '';
             document.getElementById('adminProdDesc').value = '';
+            updateAdminProdDescCount('');
             statusEl.innerText = 'Chấp nhận file JPG, PNG, WEBP.';
             statusEl.style.color = 'var(--text-hint)';
             updateProductImagePreview('');
@@ -4004,7 +4771,9 @@
             document.getElementById('adminProdSkinType').value = p.skin_type || '';
             const currentImg = p.primary_image || '';
             document.getElementById('adminProdImage').value = currentImg;
-            document.getElementById('adminProdDesc').value = p.description || p.short_description || '';
+            const descVal = p.description || p.short_description || '';
+            document.getElementById('adminProdDesc').value = descVal;
+            updateAdminProdDescCount(descVal);
             statusEl.innerText = currentImg ? 'Ảnh hiện tại của sản phẩm' : 'Chưa có ảnh';
             statusEl.style.color = 'var(--text-hint)';
             updateProductImagePreview(currentImg);
@@ -4044,6 +4813,12 @@
         if (isNaN(price) || price <= 0) {
             alert('Vui lòng nhập giá bán hợp lệ (Ví dụ: 260000 hoặc 260.000)!');
             document.getElementById('adminProdPrice').focus();
+            return;
+        }
+
+        if (description.length > 10000) {
+            alert('Mô tả sản phẩm không được vượt quá 10.000 ký tự (hiện tại: ' + description.length.toLocaleString('vi-VN') + ' ký tự)!');
+            document.getElementById('adminProdDesc').focus();
             return;
         }
 
@@ -4313,36 +5088,423 @@
         }
     }
 
-    // 5. USERS
-    async function loadAdminUsers() {
+    // ==========================================
+    // 4.5. QUẢN LÝ MÃ KHUYẾN MÃI / VOUCHER (ADMIN)
+    // ==========================================
+    let adminCouponsList = [];
+
+    async function loadAdminCoupons() {
         if (!currentToken) return;
+        const container = document.getElementById('adminCouponsContainer');
         try {
-            const res = await fetch('/api/admin/customers', {
+            const res = await fetch('/api/coupons/admin/all?t=' + Date.now(), {
+                cache: 'no-store',
+                headers: { 
+                    'Authorization': 'Bearer ' + currentToken,
+                    'Cache-Control': 'no-cache'
+                }
+            });
+            const data = await res.json();
+            if (data.success && data.data) {
+                adminCouponsList = data.data || [];
+                const totalEl = document.getElementById('adminCouponsCountTotal');
+                const badgeEl = document.getElementById('adminCouponsCount');
+                if (totalEl) totalEl.innerText = adminCouponsList.length;
+                if (badgeEl) badgeEl.innerText = adminCouponsList.length;
+                renderAdminCoupons();
+            }
+        } catch (e) {
+            console.error('loadAdminCoupons error:', e);
+            if (container) container.innerHTML = '<p style="text-align: center; color: #E74C3C; padding: 20px 0; font-size: 12px;">Lỗi tải danh sách mã khuyến mãi.</p>';
+        }
+    }
+
+    function renderAdminCoupons() {
+        const container = document.getElementById('adminCouponsContainer');
+        if (!container) return;
+
+        if (adminCouponsList.length === 0) {
+            container.innerHTML = `
+                <div style="text-align: center; padding: 28px 14px; background: #FFFFFF; border-radius: 14px; border: 1.5px dashed var(--divider);">
+                    <span style="font-size: 26px;">🎟️</span>
+                    <div style="font-size: 13px; font-weight: 700; color: var(--primary); margin-top: 6px;">Chưa có mã khuyến mãi nào</div>
+                    <div style="font-size: 11px; color: var(--text-hint); margin-top: 2px;">Nhấn "➕ Tạo Mã Mới" để thiết lập mã ưu đãi đầu tiên.</div>
+                </div>
+            `;
+            return;
+        }
+
+        container.innerHTML = adminCouponsList.map(c => {
+            const isPercent = c.discount_type === 'PERCENT';
+            const valDisplay = isPercent ? `${parseFloat(c.discount_value)}%` : formatVND(c.discount_value);
+            const maxDisplay = isPercent && c.max_discount_amount ? ` (Tối đa ${formatVND(c.max_discount_amount)})` : '';
+            const minOrderDisplay = c.min_order_amount > 0 ? `Đơn từ: <strong>${formatVND(c.min_order_amount)}</strong>` : 'Mọi giá trị đơn';
+            const endDateDisplay = c.end_date ? new Date(c.end_date).toLocaleDateString('vi-VN') : 'Vô thời hạn';
+            const isExhausted = c.times_used >= c.usage_limit;
+
+            return `
+                <div style="background: #FFFFFF; border: 1.5px solid ${c.is_active ? 'var(--accent)' : 'var(--divider)'}; border-radius: 14px; padding: 14px; box-shadow: var(--shadow-card); display: flex; flex-direction: column; gap: 8px;">
+                    <div style="display: flex; justify-content: space-between; align-items: flex-start; gap: 8px;">
+                        <div style="display: flex; align-items: center; gap: 8px;">
+                            <span style="font-size: 13.5px; font-weight: 800; background: #FFF4E5; color: var(--primary); border: 1.5px dashed var(--accent); padding: 4px 10px; border-radius: 8px; letter-spacing: 0.8px;">
+                                ${c.code}
+                            </span>
+                            <span style="font-size: 12.5px; font-weight: 800; color: var(--primary);">${c.title}</span>
+                        </div>
+                        <span style="font-size: 10px; padding: 2px 7px; border-radius: 6px; font-weight: 800; ${c.is_active ? 'background: #D1FAE5; color: #065F46;' : 'background: #FEE2E2; color: #991B1B;'}">
+                            ${c.is_active ? '● Đang mở' : '🔒 Đã tắt'}
+                        </span>
+                    </div>
+
+                    <div style="font-size: 11.5px; color: var(--text-secondary); line-height: 1.5;">
+                        <div>✨ Mức giảm: <strong style="color: var(--price); font-size: 13px;">${valDisplay}</strong>${maxDisplay} • ${minOrderDisplay}</div>
+                        <div>📊 Lượt dùng: <strong>${c.times_used} / ${c.usage_limit}</strong> lượt ${isExhausted ? '<span style="color: #E74C3C; font-weight: 700;">(Đã hết lượt)</span>' : ''}</div>
+                        <div>⏳ Hạn dùng: <strong>${endDateDisplay}</strong></div>
+                        ${c.description ? `<div style="font-size: 11px; color: var(--text-hint); margin-top: 2px;"><i>${c.description}</i></div>` : ''}
+                    </div>
+
+                    <div style="display: flex; gap: 8px; justify-content: flex-end; align-items: center; padding-top: 6px; border-top: 1px dashed var(--divider);">
+                        <button type="button" onclick="toggleAdminCouponStatus(${c.id}, ${!c.is_active})" style="padding: 5px 10px; background: ${c.is_active ? '#FEF3C7' : '#D1FAE5'}; border: 1px solid ${c.is_active ? '#FCD34D' : '#6EE7B7'}; color: ${c.is_active ? '#92400E' : '#065F46'}; border-radius: 6px; font-size: 11px; font-weight: 700; cursor: pointer;">
+                            ${c.is_active ? 'Tạm ngưng mã' : 'Kích hoạt lại'}
+                        </button>
+                        <button type="button" onclick="deleteAdminCoupon(${c.id}, '${c.code}')" style="padding: 5px 10px; background: #FEE2E2; border: 1px solid #FCA5A5; color: #991B1B; border-radius: 6px; font-size: 11px; font-weight: 700; cursor: pointer;">
+                            🗑️ Xóa
+                        </button>
+                    </div>
+                </div>
+            `;
+        }).join('');
+    }
+
+    function openAdminCouponModal() {
+        document.getElementById('adminCpnCode').value = '';
+        document.getElementById('adminCpnTitle').value = '';
+        document.getElementById('adminCpnDesc').value = '';
+        document.getElementById('adminCpnType').value = 'PERCENT';
+        document.getElementById('adminCpnValue').value = '';
+        document.getElementById('adminCpnMaxValue').value = '';
+        document.getElementById('adminCpnMinOrder').value = '0';
+        document.getElementById('adminCpnLimit').value = '100';
+        document.getElementById('adminCpnEndDate').value = '';
+        handleAdminCouponTypeChange('PERCENT');
+
+        document.getElementById('adminCouponModal').style.display = 'flex';
+    }
+
+    function closeAdminCouponModal() {
+        document.getElementById('adminCouponModal').style.display = 'none';
+    }
+
+    function handleAdminCouponTypeChange(type) {
+        const lbl = document.getElementById('lblCpnValue');
+        const grpMax = document.getElementById('grpCpnMaxValue');
+        if (type === 'PERCENT') {
+            if (lbl) lbl.innerHTML = 'Mức giảm (%) <span style="color: #E74C3C;">*</span>';
+            if (grpMax) grpMax.style.display = 'block';
+        } else {
+            if (lbl) lbl.innerHTML = 'Mức giảm (VNĐ) <span style="color: #E74C3C;">*</span>';
+            if (grpMax) grpMax.style.display = 'none';
+        }
+    }
+
+    async function saveAdminCoupon() {
+        const code = document.getElementById('adminCpnCode').value.trim();
+        const title = document.getElementById('adminCpnTitle').value.trim();
+        const discount_type = document.getElementById('adminCpnType').value;
+        const discount_value = document.getElementById('adminCpnValue').value;
+        const max_discount_amount = document.getElementById('adminCpnMaxValue').value;
+        const min_order_amount = document.getElementById('adminCpnMinOrder').value;
+        const usage_limit = document.getElementById('adminCpnLimit').value;
+        const end_date = document.getElementById('adminCpnEndDate').value;
+        const description = document.getElementById('adminCpnDesc').value.trim();
+
+        if (!code || !title || !discount_value) {
+            alert('Vui lòng điền mã code, tiêu đề và mức giảm giá!');
+            return;
+        }
+
+        try {
+            showToast('Đang tạo mã giảm giá...');
+            const btn = document.getElementById('btnSaveAdminCoupon');
+            if (btn) btn.disabled = true;
+
+            const res = await fetch('/api/coupons/admin/create', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': 'Bearer ' + currentToken
+                },
+                body: JSON.stringify({
+                    code, title, description, discount_type,
+                    discount_value, max_discount_amount, min_order_amount,
+                    usage_limit, end_date
+                })
+            });
+
+            if (btn) btn.disabled = false;
+            const data = await res.json();
+            if (data.success) {
+                closeAdminCouponModal();
+                showToast(data.message || 'Tạo mã giảm giá thành công! 🎉');
+                await loadAdminCoupons();
+            } else {
+                alert('Lỗi: ' + (data.message || 'Không thể tạo mã'));
+            }
+        } catch (e) {
+            console.error('saveAdminCoupon error:', e);
+            const btn = document.getElementById('btnSaveAdminCoupon');
+            if (btn) btn.disabled = false;
+            alert('Lỗi kết nối máy chủ!');
+        }
+    }
+
+    async function toggleAdminCouponStatus(couponId, newStatus) {
+        try {
+            showToast('Đang cập nhật trạng thái mã...');
+            const res = await fetch(`/api/coupons/admin/${couponId}/status`, {
+                method: 'PUT',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': 'Bearer ' + currentToken
+                },
+                body: JSON.stringify({ is_active: newStatus })
+            });
+            const data = await res.json();
+            if (data.success) {
+                showToast(data.message || 'Cập nhật thành công!');
+                await loadAdminCoupons();
+            } else {
+                alert('Lỗi: ' + data.message);
+            }
+        } catch (e) {
+            console.error('toggleAdminCouponStatus error:', e);
+        }
+    }
+
+    async function deleteAdminCoupon(couponId, code) {
+        if (!confirm(`Bạn có chắc chắn muốn xóa mã giảm giá "${code}"?`)) return;
+        try {
+            showToast('Đang xóa mã...');
+            const res = await fetch(`/api/coupons/admin/${couponId}`, {
+                method: 'DELETE',
                 headers: { 'Authorization': 'Bearer ' + currentToken }
             });
             const data = await res.json();
             if (data.success) {
-                const list = data.data.customers || [];
-                const container = document.getElementById('adminUsersContainer');
-                container.innerHTML = list.map(u => `
-                    <div style="background: #FFFFFF; border: 1px solid var(--divider); border-radius: 12px; padding: 12px; display: flex; justify-content: space-between; align-items: center; box-shadow: var(--shadow-card);">
-                        <div>
-                            <div style="font-size: 13px; font-weight: 800; color: var(--text-primary);">${u.full_name}</div>
-                            <div style="font-size: 11px; color: var(--text-secondary); margin-top: 2px;">
-                                ✉️ ${u.email || 'N/A'} - 📞 ${u.phone || 'N/A'}
-                            </div>
-                            <div style="font-size: 10.5px; color: var(--text-hint); margin-top: 2px;">
-                                📍 ${u.address || 'Chưa cập nhật địa chỉ'}
-                            </div>
-                        </div>
-                        <span style="font-size: 11px; padding: 4px 8px; border-radius: 8px; background: #D1FAE5; color: #065F46; font-weight: 700;">
-                            ${u.is_active ? '● Hoạt động' : 'Tạm khóa'}
-                        </span>
-                    </div>
-                `).join('');
+                showToast(data.message || 'Đã xóa mã thành công!');
+                await loadAdminCoupons();
+            } else {
+                alert('Lỗi: ' + data.message);
             }
         } catch (e) {
-            console.error(e);
+            console.error('deleteAdminCoupon error:', e);
+        }
+    }
+
+    // 5. USERS MANAGEMENT (QUẢN TRỊ KHÁCH HÀNG: KHÓA/MỞ KHÓA & XÓA TÀI KHOẢN)
+    let adminUsersList = [];
+    let adminUserSearchQuery = '';
+
+    async function loadAdminUsers() {
+        if (!currentToken) return;
+        const container = document.getElementById('adminUsersContainer');
+        try {
+            const res = await fetch('/api/admin/customers?t=' + Date.now(), {
+                cache: 'no-store',
+                headers: { 
+                    'Authorization': 'Bearer ' + currentToken,
+                    'Cache-Control': 'no-cache'
+                }
+            });
+            const data = await res.json();
+            if (data.success && data.data) {
+                adminUsersList = data.data.customers || [];
+                const totalEl = document.getElementById('adminUsersCountTotal');
+                if (totalEl) totalEl.innerText = adminUsersList.length;
+                renderAdminUsers();
+            } else {
+                console.warn('loadAdminUsers response not success:', data);
+            }
+        } catch (e) {
+            console.error('loadAdminUsers error:', e);
+            if (container) {
+                container.innerHTML = '<p style="text-align: center; color: #E74C3C; padding: 24px 0; font-size: 12px;">Lỗi tải danh sách khách hàng. Nhấn Làm mới 🔄</p>';
+            }
+        }
+    }
+
+    function handleAdminUserSearch(q) {
+        adminUserSearchQuery = (q || '').trim().toLowerCase();
+        renderAdminUsers();
+    }
+
+    function clearAdminUserSearch() {
+        const input = document.getElementById('adminUserSearchInput');
+        if (input) input.value = '';
+        adminUserSearchQuery = '';
+        renderAdminUsers();
+    }
+
+    function renderAdminUsers() {
+        const container = document.getElementById('adminUsersContainer');
+        if (!container) return;
+
+        const searchInput = document.getElementById('adminUserSearchInput');
+        const query = (searchInput ? searchInput.value : adminUserSearchQuery || '').trim().toLowerCase();
+
+        let filtered = adminUsersList;
+        if (query) {
+            filtered = adminUsersList.filter(u => 
+                (u.full_name && u.full_name.toLowerCase().includes(query)) ||
+                (u.email && u.email.toLowerCase().includes(query)) ||
+                (u.phone && String(u.phone).includes(query))
+            );
+        }
+
+        if (filtered.length === 0) {
+            if (query) {
+                container.innerHTML = `
+                    <div style="text-align: center; padding: 28px 14px; background: #FFFFFF; border-radius: 14px; border: 1.5px dashed var(--divider);">
+                        <span style="font-size: 24px;">🔍</span>
+                        <div style="font-size: 13px; font-weight: 700; color: var(--primary); margin-top: 6px;">Không tìm thấy khách hàng nào với từ khóa "${query}"</div>
+                        <div style="font-size: 11px; color: var(--text-hint); margin-top: 4px;">Tổng số tài khoản trong hệ thống: ${adminUsersList.length}</div>
+                        <button type="button" onclick="clearAdminUserSearch()" style="margin-top: 10px; padding: 6px 14px; background: var(--accent-light); border: 1px solid var(--accent); border-radius: 8px; font-size: 11.5px; font-weight: 700; color: var(--accent); cursor: pointer;">
+                            ✕ Xóa bộ lọc tìm kiếm
+                        </button>
+                    </div>
+                `;
+            } else {
+                container.innerHTML = `
+                    <div style="text-align: center; padding: 28px 14px; background: #FFFFFF; border-radius: 14px; border: 1.5px dashed var(--divider);">
+                        <span style="font-size: 24px;">👥</span>
+                        <div style="font-size: 13px; font-weight: 700; color: var(--primary); margin-top: 6px;">Chưa có tài khoản khách hàng nào</div>
+                        <div style="font-size: 11px; color: var(--text-hint); margin-top: 2px;">Khi khách hàng đăng ký tài khoản, danh sách sẽ hiển thị tại đây.</div>
+                    </div>
+                `;
+            }
+            return;
+        }
+
+        container.innerHTML = filtered.map(u => {
+            const dateStr = u.created_at ? new Date(u.created_at).toLocaleDateString('vi-VN') : '';
+            const isLocked = !u.is_active;
+
+            return `
+                <div style="background: #FFFFFF; border: 1px solid var(--divider); border-radius: 14px; padding: 14px; box-shadow: var(--shadow-card); display: flex; flex-direction: column; gap: 10px;">
+                    <!-- User Header -->
+                    <div style="display: flex; justify-content: space-between; align-items: flex-start; gap: 10px;">
+                        <div style="display: flex; align-items: center; gap: 10px;">
+                            <div style="width: 40px; height: 40px; border-radius: 50%; background: ${isLocked ? '#FEE2E2' : 'var(--surface-variant)'}; color: ${isLocked ? '#991B1B' : 'var(--primary)'}; display: flex; align-items: center; justify-content: center; font-size: 15px; font-weight: 800; border: 1px solid var(--divider); flex-shrink: 0;">
+                                ${u.avatar_url ? `<img src="${u.avatar_url}" style="width: 100%; height: 100%; border-radius: 50%; object-fit: cover;">` : (u.full_name ? u.full_name.charAt(0).toUpperCase() : '👤')}
+                            </div>
+                            <div>
+                                <div style="display: flex; align-items: center; gap: 6px; flex-wrap: wrap;">
+                                    <span style="font-size: 13.5px; font-weight: 800; color: var(--text-primary);">${u.full_name}</span>
+                                    <span style="font-size: 10px; background: rgba(61,35,20,0.06); padding: 1px 5px; border-radius: 5px; color: var(--text-hint);">#${u.id}</span>
+                                </div>
+                                <div style="font-size: 11px; color: var(--text-hint); margin-top: 2px;">
+                                    Đăng ký: ${dateStr || 'Mới'}
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Trạng thái tài khoản -->
+                        <span style="font-size: 10.5px; padding: 3px 8px; border-radius: 6px; font-weight: 700; ${u.is_active ? 'background: #D1FAE5; color: #065F46;' : 'background: #FEE2E2; color: #991B1B;'}">
+                            ${u.is_active ? '● Hoạt động' : '🔒 Đã khóa'}
+                        </span>
+                    </div>
+
+                    <!-- User Details -->
+                    <div style="display: flex; flex-direction: column; gap: 3px; font-size: 11.5px; color: var(--text-secondary); background: var(--surface-variant); padding: 8px 10px; border-radius: 8px;">
+                        <div>✉️ Email: <strong style="color: var(--text-primary);">${u.email || 'Chưa có'}</strong></div>
+                        <div>📞 Số điện thoại: <strong style="color: var(--text-primary);">${u.phone || 'Chưa có'}</strong></div>
+                        <div>📍 Địa chỉ: <strong>${u.address || 'Chưa cập nhật'}</strong></div>
+                        <div style="color: var(--price); font-weight: 700; margin-top: 2px;">
+                            🛍️ Đã mua: ${u.total_orders || 0} đơn hàng (${formatVND(u.total_spent || 0)})
+                        </div>
+                    </div>
+
+                    <!-- Action Buttons: Khóa/Mở khóa & Xóa -->
+                    <div style="display: flex; gap: 8px; justify-content: flex-end; align-items: center; padding-top: 6px; border-top: 1px dashed var(--divider);">
+                        ${u.is_active ? `
+                            <button type="button" onclick="toggleAdminUserStatus(${u.id}, false)" style="padding: 6px 12px; background: #FEF3C7; border: 1px solid #FCD34D; color: #92400E; border-radius: 8px; font-size: 11.5px; font-weight: 700; cursor: pointer; display: inline-flex; align-items: center; gap: 4px;">
+                                🔒 Khóa tài khoản
+                            </button>
+                        ` : `
+                            <button type="button" onclick="toggleAdminUserStatus(${u.id}, true)" style="padding: 6px 12px; background: #D1FAE5; border: 1px solid #6EE7B7; color: #065F46; border-radius: 8px; font-size: 11.5px; font-weight: 700; cursor: pointer; display: inline-flex; align-items: center; gap: 4px;">
+                                🔓 Mở khóa tài khoản
+                            </button>
+                        `}
+                        <button type="button" onclick="deleteAdminUser(${u.id})" style="padding: 6px 12px; background: #FEE2E2; border: 1px solid #FCA5A5; color: #991B1B; border-radius: 8px; font-size: 11.5px; font-weight: 700; cursor: pointer; display: inline-flex; align-items: center; gap: 4px;">
+                            🗑️ Xóa tài khoản
+                        </button>
+                    </div>
+                </div>
+            `;
+        }).join('');
+    }
+
+    async function toggleAdminUserStatus(userId, newActiveStatus) {
+        const user = adminUsersList.find(x => x.id === userId);
+        const userName = user ? user.full_name : ('#' + userId);
+        const actionText = newActiveStatus ? 'MỞ KHÓA' : 'KHÓA';
+        const confirmMsg = newActiveStatus 
+            ? `Bạn có chắc chắn muốn MỞ KHÓA cho tài khoản khách hàng:\n"${userName}"?` 
+            : `Bạn có chắc chắn muốn KHÓA tài khoản khách hàng:\n"${userName}"?\n\n(Sau khi khóa, khách hàng sẽ không thể đăng nhập vào ứng dụng)`;
+
+        if (!confirm(confirmMsg)) return;
+
+        try {
+            showToast(`Đang ${actionText.toLowerCase()} tài khoản...`);
+            const res = await fetch(`/api/admin/customers/${userId}/status`, {
+                method: 'PUT',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': 'Bearer ' + currentToken
+                },
+                body: JSON.stringify({ is_active: newActiveStatus })
+            });
+            const data = await res.json();
+            if (data.success) {
+                showToast(data.message || `${actionText} thành công!`);
+                await loadAdminUsers();
+                loadAdminStats();
+            } else {
+                alert('Không thể cập nhật: ' + (data.message || 'Lỗi'));
+            }
+        } catch (e) {
+            console.error('toggleAdminUserStatus error:', e);
+            alert('Lỗi kết nối khi cập nhật trạng thái tài khoản!');
+        }
+    }
+
+    async function deleteAdminUser(userId) {
+        const user = adminUsersList.find(x => x.id === userId);
+        const userName = user ? user.full_name : ('#' + userId);
+
+        if (!confirm(`⚠️ CẢNH BÁO QUAN TRỌNG:\nBạn có chắc chắn muốn XÓA tài khoản khách hàng:\n"${userName}"?\n\n(Thao tác sẽ gỡ bỏ hoặc đóng vĩnh viễn tài khoản khỏi hệ thống Moccoon!)`)) {
+            return;
+        }
+
+        try {
+            showToast('Đang thực hiện xóa tài khoản...');
+            const res = await fetch(`/api/admin/customers/${userId}`, {
+                method: 'DELETE',
+                headers: {
+                    'Authorization': 'Bearer ' + currentToken
+                }
+            });
+            const data = await res.json();
+            if (data.success) {
+                showToast(data.message || 'Đã xóa tài khoản thành công!');
+                await loadAdminUsers();
+                loadAdminStats();
+            } else {
+                alert('Không thể xóa: ' + (data.message || 'Lỗi'));
+            }
+        } catch (e) {
+            console.error('deleteAdminUser error:', e);
+            alert('Lỗi kết nối khi xóa tài khoản!');
         }
     }
 
@@ -5134,26 +6296,40 @@
                     if (countEl) countEl.innerText = cnt;
                 }
 
-                // KIỂM TRA QUY TẮC: TÀI KHOẢN ĐÃ ĐÁNH GIÁ CHƯA?
+                // KIỂM TRA QUY TẮC: XÁC THỰC MUA HÀNG (CHỈ MỞ FORM KHI ĐÃ MUA & NHẬN HÀNG THÀNH CÔNG)
                 const writeReviewCard = document.getElementById('writeReviewCard');
+                if (writeReviewCard) writeReviewCard.style.display = 'none';
+
                 const isAdmin = currentUser && currentUser.role === 'ADMIN';
 
-                if (isAdmin) {
-                    if (writeReviewCard) writeReviewCard.style.display = 'none';
-                } else {
-                    const myReview = (currentUser && Array.isArray(reviews)) ? reviews.find(r => r.user_id === currentUser.id) : null;
-                    myCurrentReview = myReview;
+                // Chỉ kiểm tra mở form khi là khách hàng đã đăng nhập
+                if (!isAdmin && currentToken) {
+                    try {
+                        const eligRes = await fetch(`/api/products/${productId}/reviews/eligibility`, {
+                            headers: { 'Authorization': 'Bearer ' + currentToken }
+                        });
+                        const eligData = await eligRes.json();
 
-                    if (myReview) {
-                        // Tài khoản đã đánh giá sản phẩm này -> Ẩn form viết mới (đánh giá hiển thị trực tiếp trong danh sách bên dưới)
-                        if (writeReviewCard) writeReviewCard.style.display = 'none';
-                    } else {
-                        // Chưa đánh giá -> Hiển thị form để khách hàng viết đánh giá
-                        if (writeReviewCard) {
-                            writeReviewCard.style.display = 'block';
-                            document.getElementById('writeReviewTitle').innerHTML = '✍️ Viết đánh giá của bạn';
-                            document.getElementById('btnSubmitReview').innerText = 'Gửi Đánh Giá ✨';
+                        if (eligData.success && eligData.can_review && !eligData.already_reviewed) {
+                            // Đã mua và đơn hàng ĐÃ GIAO THÀNH CÔNG -> Mở form viết đánh giá
+                            if (writeReviewCard) {
+                                writeReviewCard.style.display = 'block';
+                                const titleEl = document.getElementById('writeReviewTitle');
+                                if (titleEl) {
+                                    titleEl.innerHTML = `
+                                        ✍️ Viết đánh giá của bạn
+                                        <span style="background: #D1FAE5; color: #065F46; padding: 2px 7px; border-radius: 6px; font-size: 10px; font-weight: 800; border: 1px solid #A7F3D0; margin-left: 6px;">✓ Xác thực đã nhận hàng</span>
+                                    `;
+                                }
+                                const btnSubmit = document.getElementById('btnSubmitReview');
+                                if (btnSubmit) {
+                                    btnSubmit.disabled = false;
+                                    btnSubmit.innerText = 'Gửi Đánh Giá ✨';
+                                }
+                            }
                         }
+                    } catch (err) {
+                        console.error('Check review eligibility error:', err);
                     }
                 }
 
@@ -5465,27 +6641,43 @@
         }
 
         try {
-            showToast('Đang chuẩn bị đơn hàng Mua Ngay...');
-            const res = await fetch('/api/cart/add', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'Authorization': 'Bearer ' + currentToken
-                },
-                body: JSON.stringify({ product_id: productId, quantity })
-            });
-            const data = await res.json();
-            if (data.success) {
-                await loadCart();
-                closeProductDetailModal();
-                openCheckoutModal();
-                showToast('⚡ Vui lòng xác nhận thông tin nhận hàng để hoàn tất đơn!');
-            } else {
-                alert('Không thể mua ngay: ' + (data.message || 'Lỗi'));
+            showToast('Đang chuẩn bị đơn hàng Mua Ngay...', 'info');
+
+            // 1. Tìm thông tin sản phẩm từ bộ nhớ cache hoặc modal chi tiết
+            let prod = (typeof products !== 'undefined' ? products.find(p => p.id == productId) : null);
+            if (!prod && currentDetailProduct && currentDetailProduct.id == productId) {
+                prod = currentDetailProduct;
             }
+
+            // 2. Nếu chưa có thông tin thì fetch nhanh từ API
+            if (!prod) {
+                const res = await fetch(`/api/products/${productId}`);
+                const data = await res.json();
+                if (data.success) {
+                    prod = data.data;
+                }
+            }
+
+            if (!prod) {
+                showToast('Không tìm thấy thông tin sản phẩm để Mua Ngay!', 'error');
+                return;
+            }
+
+            closeProductDetailModal();
+
+            // Mở modal thanh toán riêng biệt cho món này (KHÔNG cộng dồn vào giỏ hàng)
+            openCheckoutModal({
+                product_id: prod.id,
+                name: prod.name,
+                price: Number(prod.price),
+                quantity: Math.max(1, Number(quantity) || 1),
+                image_url: prod.primary_image || (prod.images && prod.images[0]?.image_url) || ''
+            });
+
+            showToast('⚡ Vui lòng xác nhận thông tin nhận hàng để hoàn tất đơn!');
         } catch (e) {
             console.error('buyNow error:', e);
-            alert('Lỗi kết nối khi mua hàng!');
+            showToast('Lỗi kết nối khi chuẩn bị mua hàng!', 'error');
         }
     }
 
@@ -5682,17 +6874,217 @@
         }
     }
 
-    async function openCheckoutModal() {
-        if (!currentCartData || !currentCartData.items || currentCartData.items.length === 0) {
-            alert('Giỏ hàng đang trống!');
+    let appliedCheckoutCoupon = null;
+    let availableCouponsList = [];
+
+    async function loadAvailableCoupons() {
+        try {
+            const listEl = document.getElementById('chkAvailableCouponsList');
+            if (!listEl) return;
+            listEl.innerHTML = '<span style="font-size: 11px; color: var(--text-hint);">Đang tải danh sách ưu đãi...</span>';
+            
+            const res = await fetch('/api/coupons/available');
+            const data = await res.json();
+            if (data.success && Array.isArray(data.data) && data.data.length > 0) {
+                availableCouponsList = data.data;
+                listEl.innerHTML = data.data.map(c => {
+                    const discountText = c.discount_type === 'PERCENT' 
+                        ? `Giảm ${c.discount_value}%${c.max_discount_amount ? ' (Tối đa ' + formatVND(c.max_discount_amount) + ')' : ''}`
+                        : `Giảm ${formatVND(c.discount_value)}`;
+                    const minOrderText = c.min_order_amount > 0 ? `Đơn từ ${formatVND(c.min_order_amount)}` : 'Mọi đơn hàng';
+                    return `
+                        <div onclick="selectCouponForCheckout('${c.code}')" style="display: flex; justify-content: space-between; align-items: center; background: #fff; border: 1px dashed var(--accent); border-radius: 8px; padding: 7px 10px; cursor: pointer; transition: all 0.2s; box-shadow: 0 1px 3px rgba(0,0,0,0.03);" onmouseover="this.style.background='#FBF7F2'" onmouseout="this.style.background='#fff'">
+                            <div>
+                                <span style="font-weight: 800; font-size: 11.5px; color: var(--accent); background: #FEF3C7; padding: 2px 6px; border-radius: 4px; letter-spacing: 0.5px;">${c.code}</span>
+                                <span style="font-size: 11px; font-weight: 700; color: var(--primary); margin-left: 6px;">${discountText}</span>
+                                <div style="font-size: 10px; color: var(--text-hint); margin-top: 2px;">${c.title ? c.title + ' • ' : ''}${minOrderText}</div>
+                            </div>
+                            <button type="button" style="background: var(--primary); color: #fff; border: none; padding: 4px 8px; border-radius: 6px; font-size: 10.5px; font-weight: 700; cursor: pointer;">Chọn</button>
+                        </div>
+                    `;
+                }).join('');
+            } else {
+                availableCouponsList = [];
+                listEl.innerHTML = '<span style="font-size: 11px; color: var(--text-hint); font-style: italic;">Hiện không có mã ưu đãi công khai nào.</span>';
+            }
+        } catch (e) {
+            console.error('loadAvailableCoupons error:', e);
+        }
+    }
+
+    function toggleAvailableCouponsList() {
+        const box = document.getElementById('chkAvailableCouponsBox');
+        if (!box) return;
+        const isHidden = box.style.display === 'none' || !box.style.display;
+        box.style.display = isHidden ? 'flex' : 'none';
+        if (isHidden && availableCouponsList.length === 0) {
+            loadAvailableCoupons();
+        }
+    }
+
+    function selectCouponForCheckout(code) {
+        const input = document.getElementById('chkCouponCode');
+        if (input) {
+            input.value = code;
+            applyCheckoutCoupon();
+        }
+    }
+
+    let checkoutMode = 'CART'; // 'CART' | 'BUY_NOW'
+    let checkoutBuyNowItem = null;
+
+    function getCheckoutBaseAmount() {
+        if (checkoutMode === 'BUY_NOW' && checkoutBuyNowItem) {
+            return Number(checkoutBuyNowItem.price) * Number(checkoutBuyNowItem.quantity);
+        }
+        return currentCartData ? Number(currentCartData.total_amount || 0) : 0;
+    }
+
+    async function applyCheckoutCoupon() {
+        const input = document.getElementById('chkCouponCode');
+        const code = input ? input.value.trim().toUpperCase() : '';
+        if (!code) {
+            showToast('Vui lòng nhập mã giảm giá!', 'warning');
             return;
         }
+
+        const totalAmount = getCheckoutBaseAmount();
+        if (totalAmount <= 0) {
+            showToast('Giá trị đơn hàng không hợp lệ!', 'warning');
+            return;
+        }
+
+        try {
+            showToast('Đang kiểm tra mã giảm giá...', 'info');
+            const res = await fetch('/api/coupons/apply', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    code: code,
+                    total_amount: totalAmount
+                })
+            });
+            const data = await res.json();
+            if (data.success) {
+                appliedCheckoutCoupon = data.data;
+                
+                // Hiển thị box thông báo áp dụng thành công
+                const resultBox = document.getElementById('chkCouponResultBox');
+                const resultText = document.getElementById('chkCouponResultText');
+                if (resultBox && resultText) {
+                    resultText.innerHTML = `<span>✅ Mã <b>${data.data.coupon_code}</b>: Giảm <b>${formatVND(data.data.discount_amount)}</b></span>`;
+                    resultBox.style.display = 'flex';
+                }
+
+                // Cập nhật dòng giảm giá
+                const rowDiscount = document.getElementById('chkRowDiscount');
+                const discountEl = document.getElementById('chkDiscountAmount');
+                if (rowDiscount && discountEl) {
+                    discountEl.innerText = `-${formatVND(data.data.discount_amount)}`;
+                    rowDiscount.style.display = 'flex';
+                }
+
+                // Cập nhật tổng tiền thanh toán mới
+                const totalEl = document.getElementById('chkTotalAmount');
+                if (totalEl) {
+                    totalEl.innerText = formatVND(data.data.final_amount);
+                }
+
+                // Đóng dropdown gợi ý nếu đang mở
+                const box = document.getElementById('chkAvailableCouponsBox');
+                if (box) box.style.display = 'none';
+
+                showToast(`🎉 Áp dụng mã ${data.data.coupon_code} thành công! Tiết kiệm ${formatVND(data.data.discount_amount)}`, 'success');
+            } else {
+                showToast(data.message || 'Mã giảm giá không hợp lệ!', 'error');
+            }
+        } catch (e) {
+            console.error('applyCheckoutCoupon error:', e);
+            showToast('Lỗi khi kết nối dịch vụ mã giảm giá!', 'error');
+        }
+    }
+
+    function removeCheckoutCoupon() {
+        appliedCheckoutCoupon = null;
+        const input = document.getElementById('chkCouponCode');
+        if (input) input.value = '';
+
+        const resultBox = document.getElementById('chkCouponResultBox');
+        if (resultBox) resultBox.style.display = 'none';
+
+        const rowDiscount = document.getElementById('chkRowDiscount');
+        if (rowDiscount) rowDiscount.style.display = 'none';
+
+        const totalEl = document.getElementById('chkTotalAmount');
+        if (totalEl) {
+            totalEl.innerText = formatVND(getCheckoutBaseAmount());
+        }
+
+        showToast('Đã gỡ mã giảm giá.', 'info');
+    }
+
+    async function openCheckoutModal(buyNowItem = null) {
+        if (buyNowItem) {
+            checkoutMode = 'BUY_NOW';
+            checkoutBuyNowItem = buyNowItem;
+        } else {
+            checkoutMode = 'CART';
+            checkoutBuyNowItem = null;
+            if (!currentCartData || !currentCartData.items || currentCartData.items.length === 0) {
+                showToast('Giỏ hàng đang trống!', 'warning');
+                return;
+            }
+        }
+
+        const baseTotal = getCheckoutBaseAmount();
 
         document.getElementById('chkReceiverName').value = currentUser?.full_name || '';
         document.getElementById('chkReceiverPhone').value = currentUser?.phone || '';
         document.getElementById('chkShippingAddress').value = currentUser?.address || 'Quận 1, TP. Hồ Chí Minh';
-        document.getElementById('chkSummaryAmount').innerText = formatVND(currentCartData.total_amount);
-        document.getElementById('chkTotalAmount').innerText = formatVND(currentCartData.total_amount);
+        document.getElementById('chkSummaryAmount').innerText = formatVND(baseTotal);
+        document.getElementById('chkTotalAmount').innerText = formatVND(baseTotal);
+
+        // Hiển thị tóm tắt sản phẩm đang thanh toán
+        const previewEl = document.getElementById('chkProductsPreview');
+        if (previewEl) {
+            if (checkoutMode === 'BUY_NOW' && checkoutBuyNowItem) {
+                previewEl.innerHTML = `
+                    <div style="background: #FFFDF9; border: 1.5px solid var(--accent); border-radius: 12px; padding: 8px 12px; display: flex; align-items: center; gap: 10px; box-shadow: var(--shadow-sm);">
+                        <img src="${checkoutBuyNowItem.image_url || 'https://images.unsplash.com/photo-1556228720-195a672e8a03?w=80'}" style="width: 44px; height: 44px; border-radius: 8px; object-fit: cover; border: 1px solid var(--divider);" onerror="this.onerror=null; this.src='https://images.unsplash.com/photo-1556228720-195a672e8a03?w=80';">
+                        <div style="flex: 1; min-width: 0;">
+                            <div style="font-size: 12px; font-weight: 800; color: var(--text-primary); white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">${checkoutBuyNowItem.name}</div>
+                            <div style="font-size: 11px; color: var(--text-hint); margin-top: 2px;">⚡ Mua ngay: Số lượng <b>x${checkoutBuyNowItem.quantity}</b> • Đơn giá: ${formatVND(checkoutBuyNowItem.price)}</div>
+                        </div>
+                        <div style="font-size: 13px; font-weight: 800; color: var(--price);">${formatVND(baseTotal)}</div>
+                    </div>
+                `;
+                previewEl.style.display = 'block';
+            } else if (currentCartData && currentCartData.items) {
+                previewEl.innerHTML = `
+                    <div style="background: var(--surface-variant); border-radius: 10px; padding: 8px 12px; font-size: 11.5px; color: var(--text-secondary); display: flex; justify-content: space-between; align-items: center;">
+                        <span>🛒 Thanh toán giỏ hàng (<b>${currentCartData.items.length}</b> món)</span>
+                        <span style="font-weight: 800; color: var(--price);">${formatVND(baseTotal)}</span>
+                    </div>
+                `;
+                previewEl.style.display = 'block';
+            } else {
+                previewEl.style.display = 'none';
+            }
+        }
+
+        // Reset mã giảm giá trước đó
+        appliedCheckoutCoupon = null;
+        const couponInput = document.getElementById('chkCouponCode');
+        if (couponInput) couponInput.value = '';
+        const resBox = document.getElementById('chkCouponResultBox');
+        if (resBox) resBox.style.display = 'none';
+        const rowDisc = document.getElementById('chkRowDiscount');
+        if (rowDisc) rowDisc.style.display = 'none';
+        const availBox = document.getElementById('chkAvailableCouponsBox');
+        if (availBox) availBox.style.display = 'none';
+
+        // Tải danh sách mã ưu đãi sẵn sàng
+        loadAvailableCoupons();
 
         // Nạp và chọn từ sổ địa chỉ đã lưu
         if (customerAddressesList.length === 0 && currentToken) {
@@ -5705,6 +7097,8 @@
 
     function closeCheckoutModal(e) {
         document.getElementById('checkoutModal').style.display = 'none';
+        checkoutMode = 'CART';
+        checkoutBuyNowItem = null;
     }
 
     async function handleCheckoutSubmit(e) {
@@ -5716,38 +7110,55 @@
         const note = document.getElementById('chkNote').value.trim();
 
         if (!receiver_name || !receiver_phone || !shipping_address) {
-            alert('Vui lòng điền đầy đủ họ tên, SĐT và địa chỉ nhận hàng!');
+            showToast('Vui lòng điền đầy đủ họ tên, SĐT và địa chỉ nhận hàng!', 'warning');
             return;
         }
 
+        const checkoutPayload = {
+            receiver_name,
+            receiver_phone,
+            shipping_address,
+            payment_method,
+            note,
+            coupon_code: appliedCheckoutCoupon ? appliedCheckoutCoupon.coupon_code : null,
+            from_cart: checkoutMode !== 'BUY_NOW'
+        };
+
+        if (checkoutMode === 'BUY_NOW' && checkoutBuyNowItem) {
+            checkoutPayload.items = [{
+                product_id: checkoutBuyNowItem.product_id,
+                quantity: checkoutBuyNowItem.quantity
+            }];
+        }
+
         try {
-            showToast('Đang tiến hành tạo đơn hàng trong SQL Server...');
+            showToast('Đang tiến hành tạo đơn hàng trong SQL Server...', 'info');
             const res = await fetch('/api/orders/checkout', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
                     'Authorization': 'Bearer ' + currentToken
                 },
-                body: JSON.stringify({
-                    receiver_name,
-                    receiver_phone,
-                    shipping_address,
-                    payment_method,
-                    note
-                })
+                body: JSON.stringify(checkoutPayload)
             });
             const data = await res.json();
             if (data.success) {
                 closeCheckoutModal();
-                alert(`🎉 ĐẶT HÀNG THÀNH CÔNG!\nMã đơn: #${data.data.order_code}\nTổng thanh toán: ${formatVND(data.data.final_amount)}\nĐơn hàng đã được lưu vào CSDL SQL Server MoccoonDB.`);
-                loadCart();
+                const discountMsg = data.data.discount_amount > 0 
+                    ? `\n🎁 Tiết kiệm: ${formatVND(data.data.discount_amount)} (Mã: ${data.data.coupon_code})` 
+                    : '';
+                showToast(`🎉 Đặt hàng thành công! Mã đơn: #${data.data.order_code}`, 'success');
+                alert(`🎉 ĐẶT HÀNG THÀNH CÔNG!\nMã đơn: #${data.data.order_code}${discountMsg}\nTổng thanh toán: ${formatVND(data.data.final_amount)}\nĐơn hàng đã được lưu vào CSDL SQL Server MoccoonDB.`);
+                if (checkoutPayload.from_cart) {
+                    loadCart();
+                }
                 switchCustomerTab('profile');
             } else {
-                alert('Lỗi đặt hàng: ' + (data.message || 'Không thể tạo đơn'));
+                showToast(data.message || 'Không thể tạo đơn hàng!', 'error');
             }
         } catch (err) {
             console.error('handleCheckoutSubmit error:', err);
-            alert('Lỗi kết nối khi đặt hàng!');
+            showToast('Lỗi kết nối khi đặt hàng!', 'error');
         }
     }
 
@@ -5795,7 +7206,10 @@
                         <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 8px; padding-top: 8px; border-top: 1px solid var(--divider);">
                             <div>
                                 <span style="font-size: 11px; color: var(--text-hint);">Tổng tiền (${o.payment_method}):</span>
-                                <div style="font-size: 14px; font-weight: 800; color: var(--price);">${formatVND(o.final_amount)}</div>
+                                <div style="font-size: 14px; font-weight: 800; color: var(--price); display: flex; align-items: center; gap: 6px; flex-wrap: wrap;">
+                                    ${formatVND(o.final_amount)}
+                                    ${o.discount_amount > 0 ? `<span style="background: #ECFDF5; color: #065F46; padding: 2px 6px; border-radius: 6px; font-size: 10px; font-weight: 800; border: 1px solid #A7F3D0;">🏷️ -${formatVND(o.discount_amount)} (${o.coupon_code || 'Voucher'})</span>` : ''}
+                                </div>
                             </div>
                             ${o.order_status === 'PENDING' ? `
                                 <button onclick="cancelMyOrder(${o.id})" style="padding: 6px 12px; background: #FEE2E2; color: #991B1B; border: 1px solid #FCA5A5; border-radius: 8px; font-size: 11px; font-weight: 700; cursor: pointer;">
@@ -6242,6 +7656,345 @@
         if (input) input.value = label;
     }
 
+    // --- BẢN ĐỒ ĐỊA CHỈ (LEAFLET + OPENSTREETMAP) ---
+    let addressMap = null;
+    let addressMarker = null;
+
+    // Chuẩn hóa icon của Leaflet khi dùng CDN (tránh lỗi 404 hình marker)
+    function fixLeafletIconPaths() {
+        if (typeof L === 'undefined' || !L.Icon || !L.Icon.Default) return;
+        try {
+            delete L.Icon.Default.prototype._getIconUrl;
+            L.Icon.Default.mergeOptions({
+                iconRetinaUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon-2x.png',
+                iconUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon.png',
+                shadowUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png'
+            });
+        } catch (e) {
+            console.warn('fixLeafletIconPaths err:', e);
+        }
+    }
+
+    function initAddressMap() {
+        const mapContainer = document.getElementById('addressPickerMap');
+        if (!mapContainer || typeof L === 'undefined') return;
+
+        fixLeafletIconPaths();
+        const defaultLat = 10.7769; // TP. Hồ Chí Minh
+        const defaultLng = 106.7009;
+
+        if (!addressMap) {
+            addressMap = L.map('addressPickerMap', {
+                center: [defaultLat, defaultLng],
+                zoom: 15,
+                zoomControl: true
+            });
+
+            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                attribution: '© OpenStreetMap contributors',
+                maxZoom: 19
+            }).addTo(addressMap);
+
+            addressMarker = L.marker([defaultLat, defaultLng], {
+                draggable: true
+            }).addTo(addressMap);
+
+            addressMarker.on('dragend', function () {
+                const position = addressMarker.getLatLng();
+                reverseGeocodeLocation(position.lat, position.lng);
+            });
+
+            addressMap.on('click', function (e) {
+                addressMarker.setLatLng(e.latlng);
+                reverseGeocodeLocation(e.latlng.lat, e.latlng.lng);
+            });
+        }
+
+        setTimeout(() => {
+            if (addressMap) {
+                addressMap.invalidateSize();
+                addressMap.setView([defaultLat, defaultLng], 15);
+                addressMarker.setLatLng([defaultLat, defaultLng]);
+            }
+        }, 300);
+    }
+
+    async function reverseGeocodeLocation(lat, lng) {
+        try {
+            showToast('Đang tra cứu tên địa chỉ...', 'info');
+            const url = `https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}&zoom=18&addressdetails=1&accept-language=vi`;
+            const res = await fetch(url, { headers: { 'Accept-Language': 'vi' } });
+            const data = await res.json();
+            if (data && data.display_name) {
+                const addrInput = document.getElementById('newAddrLine');
+                if (addrInput) {
+                    addrInput.value = data.display_name;
+                    addrInput.focus();
+                }
+                showToast('📍 Đã chọn: ' + (data.name || 'Ghim thành công!'), 'success');
+            }
+        } catch (err) {
+            console.warn('Reverse geocode error:', err);
+            showToast(`📍 Đã ghim: ${lat.toFixed(5)}, ${lng.toFixed(5)}`, 'info');
+        }
+    }
+
+    function locateCurrentPosition() {
+        if (!navigator.geolocation) {
+            showToast('Trình duyệt không hỗ trợ GPS.', 'warning');
+            return;
+        }
+
+        showToast('Đang tìm vị trí hiện tại của bạn...', 'info');
+        navigator.geolocation.getCurrentPosition(
+            (pos) => {
+                const lat = pos.coords.latitude;
+                const lng = pos.coords.longitude;
+                if (addressMap && addressMarker) {
+                    addressMap.setView([lat, lng], 16);
+                    addressMarker.setLatLng([lat, lng]);
+                    reverseGeocodeLocation(lat, lng);
+                }
+            },
+            (err) => {
+                console.warn('Geolocation error:', err);
+                showToast('Không thể lấy vị trí hiện tại (Hãy cấp quyền GPS trên trình duyệt).', 'warning');
+            },
+            { enableHighAccuracy: true, timeout: 8000 }
+        );
+    }
+
+    async function searchLocationOnMap() {
+        const input = document.getElementById('mapSearchInput');
+        const query = input ? input.value.trim() : '';
+        if (!query) {
+            showToast('Vui lòng nhập tên địa điểm hoặc đường cần tìm!', 'warning');
+            return;
+        }
+
+        try {
+            showToast(`Đang tìm kiếm "${query}"...`, 'info');
+            const url = `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(query)}&limit=1&accept-language=vi`;
+            const res = await fetch(url, { headers: { 'Accept-Language': 'vi' } });
+            const results = await res.json();
+
+            if (results && results.length > 0) {
+                const item = results[0];
+                const lat = parseFloat(item.lat);
+                const lng = parseFloat(item.lon);
+                if (addressMap && addressMarker) {
+                    addressMap.setView([lat, lng], 16);
+                    addressMarker.setLatLng([lat, lng]);
+                    const addrInput = document.getElementById('newAddrLine');
+                    if (addrInput) {
+                        addrInput.value = item.display_name;
+                    }
+                    showToast('📍 Đã tìm thấy: ' + (item.name || query), 'success');
+                }
+            } else {
+                showToast('Không tìm thấy vị trí phù hợp trên bản đồ.', 'warning');
+            }
+        } catch (err) {
+            console.error('Search map error:', err);
+            showToast('Lỗi kết nối khi tìm kiếm trên bản đồ!', 'error');
+        }
+    }
+
+    // ==========================================
+    // BẢN ĐỒ TỔNG THỂ DÙNG CHUNG (UNIVERSAL MAP PICKER)
+    // ==========================================
+    let universalMap = null;
+    let universalMarker = null;
+    let currentMapTargetInputId = 'chkShippingAddress';
+    let currentPickedAddressText = '';
+
+    function openMapPicker(targetInputId) {
+        currentMapTargetInputId = targetInputId || 'chkShippingAddress';
+        const modal = document.getElementById('mapPickerModal');
+        if (!modal) return;
+        modal.style.display = 'flex';
+
+        fixLeafletIconPaths();
+
+        const targetInput = document.getElementById(currentMapTargetInputId);
+        const existingVal = targetInput ? targetInput.value.trim() : '';
+        const searchInput = document.getElementById('universalMapSearch');
+        if (searchInput) {
+            searchInput.value = existingVal;
+        }
+
+        const previewEl = document.getElementById('universalMapPickedAddress');
+        if (previewEl) {
+            previewEl.innerText = existingVal || 'Chạm hoặc kéo ghim trên bản đồ để chọn địa chỉ...';
+        }
+        currentPickedAddressText = existingVal;
+
+        setTimeout(() => {
+            initUniversalMap();
+            if (existingVal) {
+                executeUniversalMapSearch();
+            }
+        }, 220);
+    }
+
+    function openMapPickerForCheckout() {
+        openMapPicker('chkShippingAddress');
+    }
+
+    function openMapPickerForAddressBook() {
+        openMapPicker('newAddrLine');
+    }
+
+    function closeMapPickerModal(e) {
+        const modal = document.getElementById('mapPickerModal');
+        if (modal) modal.style.display = 'none';
+    }
+
+    function initUniversalMap() {
+        const container = document.getElementById('universalLeafletMap');
+        if (!container || typeof L === 'undefined') return;
+
+        const defaultLat = 10.7769; // TP.HCM
+        const defaultLng = 106.7009;
+
+        if (!universalMap) {
+            universalMap = L.map('universalLeafletMap', {
+                center: [defaultLat, defaultLng],
+                zoom: 15,
+                zoomControl: true
+            });
+
+            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                attribution: '© OpenStreetMap contributors',
+                maxZoom: 19
+            }).addTo(universalMap);
+
+            universalMarker = L.marker([defaultLat, defaultLng], {
+                draggable: true
+            }).addTo(universalMap);
+
+            universalMarker.on('dragend', function () {
+                const pos = universalMarker.getLatLng();
+                reverseGeocodeUniversal(pos.lat, pos.lng);
+            });
+
+            universalMap.on('click', function (e) {
+                universalMarker.setLatLng(e.latlng);
+                reverseGeocodeUniversal(e.latlng.lat, e.latlng.lng);
+            });
+        }
+
+        setTimeout(() => {
+            if (universalMap) {
+                universalMap.invalidateSize();
+                if (!currentPickedAddressText) {
+                    universalMap.setView([defaultLat, defaultLng], 15);
+                    universalMarker.setLatLng([defaultLat, defaultLng]);
+                    reverseGeocodeUniversal(defaultLat, defaultLng);
+                }
+            }
+        }, 260);
+    }
+
+    async function reverseGeocodeUniversal(lat, lng) {
+        const previewEl = document.getElementById('universalMapPickedAddress');
+        if (previewEl) previewEl.innerText = 'Đang tra cứu tên địa chỉ tại vị trí vừa chọn...';
+
+        try {
+            const url = `https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}&zoom=18&addressdetails=1&accept-language=vi`;
+            const res = await fetch(url, { headers: { 'Accept-Language': 'vi' } });
+            const data = await res.json();
+            if (data && data.display_name) {
+                currentPickedAddressText = data.display_name;
+                if (previewEl) previewEl.innerText = currentPickedAddressText;
+                const searchInput = document.getElementById('universalMapSearch');
+                if (searchInput && !searchInput.matches(':focus')) {
+                    searchInput.value = currentPickedAddressText;
+                }
+            } else {
+                currentPickedAddressText = `${lat.toFixed(5)}, ${lng.toFixed(5)}`;
+                if (previewEl) previewEl.innerText = currentPickedAddressText;
+            }
+        } catch (e) {
+            console.warn('Reverse geocode error:', e);
+            currentPickedAddressText = `${lat.toFixed(5)}, ${lng.toFixed(5)}`;
+            if (previewEl) previewEl.innerText = currentPickedAddressText;
+        }
+    }
+
+    async function executeUniversalMapSearch() {
+        const input = document.getElementById('universalMapSearch');
+        const query = input ? input.value.trim() : '';
+        if (!query) {
+            showToast('Vui lòng nhập địa chỉ hoặc tên địa danh để tìm!', 'warning');
+            return;
+        }
+
+        showToast(`Đang tìm kiếm "${query}"...`, 'info');
+        try {
+            const url = `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(query)}&limit=1&accept-language=vi`;
+            const res = await fetch(url, { headers: { 'Accept-Language': 'vi' } });
+            const results = await res.json();
+            if (results && results.length > 0) {
+                const item = results[0];
+                const lat = parseFloat(item.lat);
+                const lng = parseFloat(item.lon);
+                if (universalMap && universalMarker) {
+                    universalMap.setView([lat, lng], 16);
+                    universalMarker.setLatLng([lat, lng]);
+                    currentPickedAddressText = item.display_name;
+                    const previewEl = document.getElementById('universalMapPickedAddress');
+                    if (previewEl) previewEl.innerText = currentPickedAddressText;
+                    showToast('📍 Đã định vị thành công!', 'success');
+                }
+            } else {
+                showToast('Không tìm thấy địa điểm này trên bản đồ. Bạn có thể bấm chọn thủ công!', 'warning');
+            }
+        } catch (e) {
+            console.error('executeUniversalMapSearch error:', e);
+            showToast('Lỗi khi kết nối dịch vụ bản đồ!', 'error');
+        }
+    }
+
+    function locateUniversalMapPosition() {
+        if (!navigator.geolocation) {
+            showToast('Trình duyệt không hỗ trợ GPS.', 'warning');
+            return;
+        }
+        showToast('Đang lấy tọa độ GPS của bạn...', 'info');
+        navigator.geolocation.getCurrentPosition(
+            (pos) => {
+                const lat = pos.coords.latitude;
+                const lng = pos.coords.longitude;
+                if (universalMap && universalMarker) {
+                    universalMap.setView([lat, lng], 16);
+                    universalMarker.setLatLng([lat, lng]);
+                    reverseGeocodeUniversal(lat, lng);
+                    showToast('🎯 Đã định vị vị trí hiện tại của bạn!', 'success');
+                }
+            },
+            (err) => {
+                console.warn('locateUniversalMapPosition error:', err);
+                showToast('Không thể lấy vị trí hiện tại (Hãy cấp quyền GPS trên trình duyệt).', 'warning');
+            },
+            { enableHighAccuracy: true, timeout: 8000 }
+        );
+    }
+
+    function confirmUniversalMapAddress() {
+        if (!currentPickedAddressText) {
+            showToast('Vui lòng chọn hoặc ghim một địa chỉ trên bản đồ!', 'warning');
+            return;
+        }
+        const targetInput = document.getElementById(currentMapTargetInputId);
+        if (targetInput) {
+            targetInput.value = currentPickedAddressText;
+            targetInput.focus();
+        }
+        closeMapPickerModal();
+        showToast('✅ Đã áp dụng địa chỉ từ bản đồ!', 'success');
+    }
+
     function openAddAddressModal() {
         if (!currentUser) {
             openAuthModal();
@@ -6262,6 +8015,7 @@
         if (labelInput) labelInput.value = 'Nhà riêng';
 
         document.getElementById('addAddressModal').style.display = 'flex';
+        initAddressMap();
     }
 
     function closeAddAddressModal(e) {

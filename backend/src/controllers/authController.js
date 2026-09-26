@@ -28,10 +28,23 @@ exports.register = async (req, res) => {
             });
         }
 
-        if (cleanPassword.length < 6) {
+        if (cleanPassword.length < 8) {
             return res.status(400).json({
                 success: false,
-                message: 'Mật khẩu phải có độ dài ít nhất 6 ký tự.'
+                message: 'Mật khẩu phải có độ dài ít nhất 8 ký tự.'
+            });
+        }
+
+        let charTypes = 0;
+        if (/[a-z]/.test(cleanPassword)) charTypes++;
+        if (/[A-Z]/.test(cleanPassword)) charTypes++;
+        if (/[0-9]/.test(cleanPassword)) charTypes++;
+        if (/[^a-zA-Z0-9]/.test(cleanPassword)) charTypes++;
+
+        if (charTypes < 2) {
+            return res.status(400).json({
+                success: false,
+                message: 'Mật khẩu phải đạt mức độ Khá trở lên (kết hợp ít nhất 2 nhóm: chữ thường, chữ hoa, số hoặc ký tự đặc biệt).'
             });
         }
 
@@ -298,3 +311,4 @@ exports.changePassword = async (req, res) => {
         });
     }
 };
+
