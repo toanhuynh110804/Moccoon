@@ -1743,6 +1743,23 @@
             transform: scale(1.05);
             box-shadow: 0 4px 10px rgba(0,0,0,0.15);
         }
+
+        /* ======================================================= */
+        /* CĂN ĐỀU HAI BÊN (JUSTIFIED) CHO CÁC ĐOẠN VĂN BẢN VÀ NỘI DUNG */
+        /* ======================================================= */
+        .text-justify,
+        #detailProdShortDesc,
+        .review-comment-text,
+        .article-bullet-item,
+        .article-bullet-item > span:last-child,
+        #articlePolicySection p,
+        #articleAboutSection p,
+        .drawer-menu-card p,
+        .content-paragraph {
+            text-align: justify !important;
+            text-justify: inter-word !important;
+            text-align-last: left !important;
+        }
     </style>
 </head>
 <body>
