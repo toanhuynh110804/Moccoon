@@ -70,18 +70,35 @@ namespace MoccoonLauncher
 
                         if (foundServerScript != null && workingDir != null)
                         {
+                            // Tìm node.exe portable nếu máy chưa cài Node.js
+                            string nodeCommand = "node";
+                            string[] nodeCandidates = new string[]
+                            {
+                                Path.Combine(baseDir, "node_bin", "node.exe"),
+                                Path.Combine(baseDir, "..", "node_bin", "node.exe"),
+                                Path.Combine(workingDir, "..", "node_bin", "node.exe")
+                            };
+                            foreach (string nc in nodeCandidates)
+                            {
+                                if (File.Exists(nc))
+                                {
+                                    nodeCommand = "\"" + Path.GetFullPath(nc) + "\"";
+                                    break;
+                                }
+                            }
+
                             // Khởi động server ngầm không hiện console
                             ProcessStartInfo serverPsi = new ProcessStartInfo();
                             serverPsi.FileName = "cmd.exe";
-                            serverPsi.Arguments = "/c node \"" + foundServerScript + "\"";
+                            serverPsi.Arguments = "/c " + nodeCommand + " \"" + foundServerScript + "\"";
                             serverPsi.WorkingDirectory = workingDir;
                             serverPsi.WindowStyle = ProcessWindowStyle.Hidden;
                             serverPsi.CreateNoWindow = true;
                             serverPsi.UseShellExecute = false;
                             Process.Start(serverPsi);
 
-                            // Đợi tối đa 3 giây cho server lên
-                            for (int i = 0; i < 6; i++)
+                            // Đợi tối đa 4 giây cho server lên
+                            for (int i = 0; i < 8; i++)
                             {
                                 System.Threading.Thread.Sleep(500);
                                 if (CheckPort("127.0.0.1", 5000)) break;
