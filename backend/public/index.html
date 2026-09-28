@@ -3515,6 +3515,35 @@
                 </div>
             </div>
 
+            <!-- 3. MODAL XEM CHI TIẾT ĐƠN HÀNG (CUSTOMER ORDER DETAIL) -->
+            <div id="customerOrderDetailModal" class="modal-overlay" onclick="closeCustomerOrderDetailModal(event)">
+                <div class="modal-sheet" onclick="event.stopPropagation()" style="display: flex; flex-direction: column; max-height: 90vh; padding: 0; overflow: hidden; border-radius: 26px 26px 0 0;">
+                    
+                    <!-- Header Modal -->
+                    <div style="padding: 16px 20px; border-bottom: 1px solid var(--divider); display: flex; justify-content: space-between; align-items: center; background: #FFFFFF; flex-shrink: 0;">
+                        <div style="display: flex; align-items: center; gap: 10px;">
+                            <button type="button" onclick="closeCustomerOrderDetailModal()" style="border: none; background: var(--surface-variant); width: 32px; height: 32px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 15px; cursor: pointer; color: var(--primary);" title="Quay lại">←</button>
+                            <div>
+                                <h3 style="font-size: 15px; font-weight: 800; color: var(--primary); margin: 0;">Chi Tiết Đơn Hàng</h3>
+                                <div id="modalCustOrderSubTitle" style="font-size: 11px; color: var(--text-hint); margin-top: 1px;">Mã đơn: ...</div>
+                            </div>
+                        </div>
+                        <button type="button" class="modal-close-btn" onclick="closeCustomerOrderDetailModal()" style="position: static; font-size: 16px; width: 32px; height: 32px; border-radius: 50%; background: var(--surface-variant); border: none; cursor: pointer; display: flex; align-items: center; justify-content: center;">✕</button>
+                    </div>
+
+                    <!-- Body Modal (Scrollable) -->
+                    <div id="customerOrderDetailContent" style="padding: 16px 18px 24px; overflow-y: auto; flex: 1; display: flex; flex-direction: column; gap: 14px; background: var(--background);">
+                        <!-- Dynamic Order Content -->
+                    </div>
+
+                    <!-- Footer Modal (Hành động) -->
+                    <div id="customerOrderDetailFooter" style="padding: 12px 18px; background: #FFFFFF; border-top: 1px solid var(--divider); display: flex; gap: 8px; flex-shrink: 0;">
+                        <!-- Action Buttons -->
+                    </div>
+
+                </div>
+            </div>
+
         </div>
     </div>
 
@@ -7174,6 +7203,8 @@
         }
     }
 
+    let myOrdersList = [];
+
     async function loadMyOrders() {
         if (!currentToken) return;
         try {
@@ -7186,11 +7217,21 @@
             const data = await res.json();
             if (data.success) {
                 const orders = data.data || [];
+                myOrdersList = orders;
                 const orderCountEl = document.getElementById('profileOrdersCount');
                 if (orderCountEl) orderCountEl.innerText = orders.length;
 
                 if (orders.length === 0) {
-                    container.innerHTML = '<p style="text-align: center; color: var(--text-hint); padding: 30px 0;">Bạn chưa có đơn hàng nào.</p>';
+                    container.innerHTML = `
+                        <div style="text-align: center; padding: 40px 20px; background: #FFFFFF; border-radius: 16px; border: 1px dashed var(--divider);">
+                            <div style="font-size: 34px; margin-bottom: 8px;">🛍️</div>
+                            <div style="font-size: 13.5px; font-weight: 700; color: var(--primary);">Bạn chưa có đơn hàng nào</div>
+                            <div style="font-size: 11.5px; color: var(--text-hint); margin-top: 4px;">Hãy trải nghiệm Bộ 3 làm sạch chuyên sâu Moccoon ngay nhé!</div>
+                            <button onclick="switchCustomerTab('shop')" style="margin-top: 14px; padding: 8px 18px; background: var(--primary); color: #fff; border: none; border-radius: 10px; font-size: 12px; font-weight: 700; cursor: pointer;">
+                                Khám Phá Sản Phẩm
+                            </button>
+                        </div>
+                    `;
                     return;
                 }
 
@@ -7203,38 +7244,372 @@
                     'CANCELLED': 'Đã hủy'
                 };
 
-                container.innerHTML = orders.map(o => `
-                    <div style="background: #FFFFFF; border: 1px solid var(--divider); border-radius: 14px; padding: 14px; box-shadow: var(--shadow-card);">
-                        <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px dashed var(--divider); padding-bottom: 8px;">
-                            <span style="font-size: 13.5px; font-weight: 800; color: var(--primary);">#${o.order_code}</span>
-                            <span class="admin-order-status status-${o.order_status}">${statusMap[o.order_status] || o.order_status}</span>
-                        </div>
-                        <div style="font-size: 11px; color: var(--text-hint); margin-top: 6px;">
-                            🕒 Ngày đặt: ${o.created_at ? new Date(o.created_at).toLocaleString('vi-VN') : ''}
-                        </div>
-                        <div style="font-size: 11.5px; color: var(--text-secondary); margin-top: 4px;">
-                            📍 Giao tới: <strong>${o.receiver_name}</strong> • ${o.shipping_address}
-                        </div>
-                        <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 8px; padding-top: 8px; border-top: 1px solid var(--divider);">
-                            <div>
-                                <span style="font-size: 11px; color: var(--text-hint);">Tổng tiền (${o.payment_method}):</span>
-                                <div style="font-size: 14px; font-weight: 800; color: var(--price); display: flex; align-items: center; gap: 6px; flex-wrap: wrap;">
-                                    ${formatVND(o.final_amount)}
-                                    ${o.discount_amount > 0 ? `<span style="background: #ECFDF5; color: #065F46; padding: 2px 6px; border-radius: 6px; font-size: 10px; font-weight: 800; border: 1px solid #A7F3D0;">🏷️ -${formatVND(o.discount_amount)} (${o.coupon_code || 'Voucher'})</span>` : ''}
+                container.innerHTML = orders.map(o => {
+                    const items = o.items || [];
+                    const previewItems = items.slice(0, 2);
+                    const remainingCount = items.length - previewItems.length;
+
+                    let itemsHtml = '';
+                    if (items.length > 0) {
+                        itemsHtml = `
+                            <div style="margin-top: 8px; background: #FAF7F2; border-radius: 10px; padding: 8px 10px; display: flex; flex-direction: column; gap: 6px; border: 1px solid rgba(61,35,20,0.06);">
+                                ${previewItems.map(it => `
+                                    <div style="display: flex; align-items: center; justify-content: space-between; gap: 8px;">
+                                        <div style="display: flex; align-items: center; gap: 8px; overflow: hidden; min-width: 0;">
+                                            <img src="${it.product_image || 'https://images.unsplash.com/photo-1556228720-195a672e8a03?w=100'}" style="width: 32px; height: 32px; border-radius: 6px; object-fit: cover; border: 1px solid var(--divider); flex-shrink: 0;" />
+                                            <div style="overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 11.5px; color: var(--text-primary); font-weight: 700;">
+                                                ${escapeHtml(it.product_name)}
+                                            </div>
+                                            <span style="font-size: 10.5px; color: var(--text-hint); font-weight: 700; flex-shrink: 0;">x${it.quantity}</span>
+                                        </div>
+                                        <span style="font-size: 11.5px; color: var(--price); font-weight: 800; flex-shrink: 0;">${formatVND(it.total_price || (it.price * it.quantity))}</span>
+                                    </div>
+                                `).join('')}
+                                ${remainingCount > 0 ? `<div style="font-size: 10.5px; color: var(--accent); font-weight: 700; text-align: center; padding-top: 2px;">+ và ${remainingCount} sản phẩm khác (Bấm để xem)</div>` : ''}
+                            </div>
+                        `;
+                    }
+
+                    return `
+                        <div class="cust-order-card" onclick="openCustomerOrderDetail(${o.id})" style="background: #FFFFFF; border: 1px solid var(--divider); border-radius: 14px; padding: 14px; box-shadow: var(--shadow-card); cursor: pointer; transition: transform 0.15s ease, box-shadow 0.15s ease;">
+                            <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px dashed var(--divider); padding-bottom: 8px;">
+                                <div style="display: flex; align-items: center; gap: 6px;">
+                                    <span style="font-size: 13.5px; font-weight: 800; color: var(--primary);">#${o.order_code}</span>
+                                    <span style="font-size: 10px; background: rgba(198,134,66,0.1); color: var(--accent); padding: 1px 6px; border-radius: 4px; font-weight: 700;">${o.payment_method}</span>
+                                </div>
+                                <span class="admin-order-status status-${o.order_status}">${statusMap[o.order_status] || o.order_status}</span>
+                            </div>
+                            <div style="font-size: 11px; color: var(--text-hint); margin-top: 6px;">
+                                🕒 Ngày đặt: ${o.created_at ? new Date(o.created_at).toLocaleString('vi-VN') : ''}
+                            </div>
+                            <div style="font-size: 11.5px; color: var(--text-secondary); margin-top: 4px; line-height: 1.4;">
+                                📍 Giao tới: <strong>${escapeHtml(o.receiver_name)}</strong> • ${escapeHtml(o.shipping_address)}
+                            </div>
+
+                            ${itemsHtml}
+
+                            <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 8px; padding-top: 8px; border-top: 1px solid var(--divider);">
+                                <div>
+                                    <span style="font-size: 10.5px; color: var(--text-hint);">Tổng tiền (${o.payment_method}):</span>
+                                    <div style="font-size: 14px; font-weight: 800; color: var(--price); display: flex; align-items: center; gap: 6px; flex-wrap: wrap;">
+                                        ${formatVND(o.final_amount)}
+                                        ${o.discount_amount > 0 ? `<span style="background: #ECFDF5; color: #065F46; padding: 2px 6px; border-radius: 6px; font-size: 10px; font-weight: 800; border: 1px solid #A7F3D0;">🏷️ -${formatVND(o.discount_amount)} (${o.coupon_code || 'Voucher'})</span>` : ''}
+                                    </div>
+                                </div>
+                                <div style="display: flex; align-items: center; gap: 6px;" onclick="event.stopPropagation()">
+                                    <button onclick="openCustomerOrderDetail(${o.id})" style="padding: 6px 12px; background: #FFFDF9; color: var(--primary); border: 1.2px solid var(--accent); border-radius: 8px; font-size: 11px; font-weight: 800; cursor: pointer; display: flex; align-items: center; gap: 3px;">
+                                        👁️ Xem chi tiết
+                                    </button>
+                                    ${o.order_status === 'PENDING' ? `
+                                        <button onclick="cancelMyOrder(${o.id})" style="padding: 6px 10px; background: #FEE2E2; color: #991B1B; border: 1px solid #FCA5A5; border-radius: 8px; font-size: 11px; font-weight: 700; cursor: pointer;">
+                                            Hủy đơn
+                                        </button>
+                                    ` : ''}
                                 </div>
                             </div>
-                            ${o.order_status === 'PENDING' ? `
-                                <button onclick="cancelMyOrder(${o.id})" style="padding: 6px 12px; background: #FEE2E2; color: #991B1B; border: 1px solid #FCA5A5; border-radius: 8px; font-size: 11px; font-weight: 700; cursor: pointer;">
-                                    Hủy đơn
-                                </button>
-                            ` : ''}
                         </div>
-                    </div>
-                `).join('');
+                    `;
+                }).join('');
             }
         } catch (e) {
             console.error('loadMyOrders error:', e);
         }
+    }
+
+    // Mở modal xem toàn bộ chi tiết đơn hàng của khách hàng
+    async function openCustomerOrderDetail(orderId) {
+        let order = myOrdersList.find(x => x.id === orderId);
+        
+        const modal = document.getElementById('customerOrderDetailModal');
+        const contentEl = document.getElementById('customerOrderDetailContent');
+        const footerEl = document.getElementById('customerOrderDetailFooter');
+        const subTitleEl = document.getElementById('modalCustOrderSubTitle');
+
+        if (!modal || !contentEl) return;
+        modal.style.display = 'flex';
+
+        if (order) {
+            renderCustomerOrderDetail(order);
+        } else {
+            contentEl.innerHTML = '<p style="text-align: center; color: var(--text-hint); padding: 40px 0;">Đang tải chi tiết đơn hàng...</p>';
+            if (footerEl) footerEl.innerHTML = '';
+        }
+
+        // Tải chi tiết đơn hàng mới nhất từ API
+        try {
+            const res = await fetch(`/api/orders/${orderId}`, {
+                headers: { 'Authorization': 'Bearer ' + currentToken }
+            });
+            const data = await res.json();
+            if (data.success && data.data) {
+                order = data.data;
+                // Cập nhật lại trong cache myOrdersList nếu có
+                const idx = myOrdersList.findIndex(x => x.id === orderId);
+                if (idx !== -1) myOrdersList[idx] = order;
+                renderCustomerOrderDetail(order);
+            }
+        } catch (err) {
+            console.error('openCustomerOrderDetail fetch error:', err);
+        }
+    }
+
+    function renderCustomerOrderDetail(order) {
+        const contentEl = document.getElementById('customerOrderDetailContent');
+        const footerEl = document.getElementById('customerOrderDetailFooter');
+        const subTitleEl = document.getElementById('modalCustOrderSubTitle');
+
+        if (!contentEl) return;
+        if (subTitleEl) {
+            subTitleEl.innerHTML = `Mã đơn: <strong style="color: var(--primary);">#${order.order_code}</strong> <button onclick="copyOrderCode('${order.order_code}')" style="background: none; border: none; font-size: 11px; color: var(--accent); cursor: pointer; padding: 0 4px; font-weight: 700;" title="Sao chép">📋</button>`;
+        }
+
+        const statusMap = {
+            'PENDING': 'Chờ xử lý',
+            'PREPARING': 'Đang chuẩn bị',
+            'CONFIRMED': 'Đã xác nhận',
+            'SHIPPING': 'Đang giao hàng',
+            'DELIVERED': 'Đã giao thành công',
+            'CANCELLED': 'Đã hủy đơn'
+        };
+
+        const items = order.items || [];
+
+        // Tính toán thanh tiến trình Stepper
+        let progressHtml = '';
+        if (order.order_status === 'CANCELLED') {
+            progressHtml = `
+                <div style="background: #FEE2E2; border: 1.5px solid #FCA5A5; border-radius: 14px; padding: 14px; display: flex; align-items: center; gap: 12px;">
+                    <div style="font-size: 26px; line-height: 1;">✕</div>
+                    <div>
+                        <div style="font-size: 13.5px; font-weight: 800; color: #991B1B;">Đơn hàng này đã bị hủy</div>
+                        <div style="font-size: 11.5px; color: #7F1D1D; margin-top: 2px; line-height: 1.4;">
+                            Đơn hàng không thể xử lý tiếp. Bạn có thể bấm nút "Mua lại đơn này" bên dưới để đặt lại các sản phẩm nhanh chóng.
+                        </div>
+                    </div>
+                </div>
+            `;
+        } else {
+            let currentStep = 1;
+            let linePct = 0;
+            if (order.order_status === 'PENDING') {
+                currentStep = 1;
+                linePct = 0;
+            } else if (order.order_status === 'PREPARING' || order.order_status === 'CONFIRMED') {
+                currentStep = 2;
+                linePct = 33;
+            } else if (order.order_status === 'SHIPPING') {
+                currentStep = 3;
+                linePct = 66;
+            } else if (order.order_status === 'DELIVERED') {
+                currentStep = 4;
+                linePct = 100;
+            }
+
+            progressHtml = `
+                <div style="background: #FFFFFF; border: 1px solid var(--divider); border-radius: 16px; padding: 16px 14px; box-shadow: var(--shadow-card);">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
+                        <span style="font-size: 11px; font-weight: 800; color: var(--text-hint); text-transform: uppercase; letter-spacing: 0.5px;">Tiến trình xử lý đơn</span>
+                        <span class="admin-order-status status-${order.order_status}" style="font-size: 11px; padding: 3px 10px;">${statusMap[order.order_status] || order.order_status}</span>
+                    </div>
+                    <div style="display: flex; align-items: center; justify-content: space-between; position: relative; padding: 0 6px;">
+                        <div style="position: absolute; top: 14px; left: 24px; right: 24px; height: 3px; background: #E5E7EB; z-index: 1;"></div>
+                        <div style="position: absolute; top: 14px; left: 24px; width: calc((100% - 48px) * ${linePct / 100}); height: 3px; background: #10B981; z-index: 2; transition: width 0.3s ease;"></div>
+
+                        <div style="display: flex; flex-direction: column; align-items: center; gap: 5px; z-index: 3;">
+                            <div style="width: 28px; height: 28px; border-radius: 50%; background: ${currentStep >= 1 ? '#10B981' : '#F3F4F6'}; color: ${currentStep >= 1 ? '#fff' : '#9CA3AF'}; display: flex; align-items: center; justify-content: center; font-size: 12px; font-weight: 800; border: 2px solid ${currentStep >= 1 ? '#10B981' : '#E5E7EB'};">
+                                ✓
+                            </div>
+                            <span style="font-size: 10px; font-weight: 700; color: ${currentStep >= 1 ? 'var(--primary)' : 'var(--text-hint)'};">Đặt hàng</span>
+                        </div>
+
+                        <div style="display: flex; flex-direction: column; align-items: center; gap: 5px; z-index: 3;">
+                            <div style="width: 28px; height: 28px; border-radius: 50%; background: ${currentStep >= 2 ? '#10B981' : '#F3F4F6'}; color: ${currentStep >= 2 ? '#fff' : '#9CA3AF'}; display: flex; align-items: center; justify-content: center; font-size: 12px; font-weight: 800; border: 2px solid ${currentStep >= 2 ? '#10B981' : '#E5E7EB'};">
+                                ${currentStep >= 2 ? '✓' : '2'}
+                            </div>
+                            <span style="font-size: 10px; font-weight: 700; color: ${currentStep >= 2 ? 'var(--primary)' : 'var(--text-hint)'};">Đóng gói</span>
+                        </div>
+
+                        <div style="display: flex; flex-direction: column; align-items: center; gap: 5px; z-index: 3;">
+                            <div style="width: 28px; height: 28px; border-radius: 50%; background: ${currentStep >= 3 ? '#10B981' : '#F3F4F6'}; color: ${currentStep >= 3 ? '#fff' : '#9CA3AF'}; display: flex; align-items: center; justify-content: center; font-size: 12px; font-weight: 800; border: 2px solid ${currentStep >= 3 ? '#10B981' : '#E5E7EB'};">
+                                ${currentStep >= 3 ? '✓' : '3'}
+                            </div>
+                            <span style="font-size: 10px; font-weight: 700; color: ${currentStep >= 3 ? 'var(--primary)' : 'var(--text-hint)'};">Đang giao</span>
+                        </div>
+
+                        <div style="display: flex; flex-direction: column; align-items: center; gap: 5px; z-index: 3;">
+                            <div style="width: 28px; height: 28px; border-radius: 50%; background: ${currentStep >= 4 ? '#10B981' : '#F3F4F6'}; color: ${currentStep >= 4 ? '#fff' : '#9CA3AF'}; display: flex; align-items: center; justify-content: center; font-size: 12px; font-weight: 800; border: 2px solid ${currentStep >= 4 ? '#10B981' : '#E5E7EB'};">
+                                ${currentStep >= 4 ? '✓' : '4'}
+                            </div>
+                            <span style="font-size: 10px; font-weight: 700; color: ${currentStep >= 4 ? 'var(--primary)' : 'var(--text-hint)'};">Thành công</span>
+                        </div>
+                    </div>
+                </div>
+            `;
+        }
+
+        contentEl.innerHTML = `
+            ${progressHtml}
+
+            <!-- Thông tin người nhận -->
+            <div style="background: #FFFFFF; border: 1px solid var(--divider); border-radius: 14px; padding: 14px; box-shadow: var(--shadow-card);">
+                <div style="font-size: 12px; font-weight: 800; color: var(--primary); margin-bottom: 8px; display: flex; align-items: center; gap: 6px;">
+                    <span>📍</span> THÔNG TIN NHẬN HÀNG
+                </div>
+                <div style="display: flex; flex-direction: column; gap: 6px; font-size: 12px; color: var(--text-secondary); line-height: 1.45;">
+                    <div>👤 Người nhận: <strong style="color: var(--text-primary); font-size: 12.5px;">${escapeHtml(order.receiver_name)}</strong> • 📞 <strong style="color: var(--text-primary);">${escapeHtml(order.receiver_phone)}</strong></div>
+                    <div>🏠 Địa chỉ nhận: ${escapeHtml(order.shipping_address)}</div>
+                    <div>🕒 Ngày đặt: ${order.created_at ? new Date(order.created_at).toLocaleString('vi-VN') : ''}</div>
+                    ${order.note ? `<div style="background: #FFFDF9; padding: 6px 10px; border-radius: 8px; border-left: 3px solid var(--accent); color: var(--accent); font-style: italic; margin-top: 2px;">💬 Ghi chú: ${escapeHtml(order.note)}</div>` : ''}
+                </div>
+            </div>
+
+            <!-- Danh sách sản phẩm mua -->
+            <div style="background: #FFFFFF; border: 1px solid var(--divider); border-radius: 14px; padding: 14px; box-shadow: var(--shadow-card);">
+                <div style="font-size: 12px; font-weight: 800; color: var(--primary); margin-bottom: 12px; display: flex; justify-content: space-between; align-items: center;">
+                    <span style="display: flex; align-items: center; gap: 6px;"><span>🧴</span> DANH SÁCH SẢN PHẨM (${items.length})</span>
+                </div>
+                <div style="display: flex; flex-direction: column; gap: 10px;">
+                    ${items.map(it => `
+                        <div style="display: flex; gap: 12px; align-items: center; padding-bottom: 10px; border-bottom: 1px dashed var(--divider);">
+                            <img src="${it.product_image || 'https://images.unsplash.com/photo-1556228720-195a672e8a03?w=120'}" 
+                                 onclick="closeCustomerOrderDetailModal(); openProductDetail(${it.product_id});"
+                                 style="width: 52px; height: 52px; border-radius: 10px; object-fit: cover; border: 1px solid var(--divider); flex-shrink: 0; cursor: pointer;" 
+                                 title="Bấm để xem sản phẩm" />
+                            <div style="flex: 1; min-width: 0;">
+                                <div onclick="closeCustomerOrderDetailModal(); openProductDetail(${it.product_id});" 
+                                     style="font-size: 12.5px; font-weight: 700; color: var(--text-primary); cursor: pointer; line-height: 1.35; overflow: hidden; text-overflow: ellipsis;" 
+                                     title="Bấm để xem sản phẩm">
+                                    ${escapeHtml(it.product_name)}
+                                </div>
+                                <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 4px;">
+                                    <span style="font-size: 11px; color: var(--text-hint);">Đơn giá: ${formatVND(it.price)} × ${it.quantity}</span>
+                                    <span style="font-size: 13px; font-weight: 800; color: var(--price);">${formatVND(it.total_price || (it.price * it.quantity))}</span>
+                                </div>
+                                ${order.order_status === 'DELIVERED' ? `
+                                    <div style="margin-top: 6px;">
+                                        <button onclick="closeCustomerOrderDetailModal(); openProductDetail(${it.product_id});" 
+                                                style="background: #FEF3C7; border: 1px solid #F59E0B; color: #92400E; padding: 3px 8px; border-radius: 6px; font-size: 10.5px; font-weight: 700; cursor: pointer; display: inline-flex; align-items: center; gap: 3px;">
+                                            ⭐ Viết đánh giá nhận hàng
+                                        </button>
+                                    </div>
+                                ` : ''}
+                            </div>
+                        </div>
+                    `).join('')}
+                </div>
+            </div>
+
+            <!-- Tóm tắt chi phí thanh toán -->
+            <div style="background: #FFFFFF; border: 1px solid var(--divider); border-radius: 14px; padding: 14px; box-shadow: var(--shadow-card);">
+                <div style="font-size: 12px; font-weight: 800; color: var(--primary); margin-bottom: 10px; display: flex; align-items: center; gap: 6px;">
+                    <span>💳</span> CHI TIẾT THANH TOÁN
+                </div>
+                <div style="display: flex; flex-direction: column; gap: 7px; font-size: 12px;">
+                    <div style="display: flex; justify-content: space-between; color: var(--text-secondary);">
+                        <span>Tiền hàng tạm tính:</span>
+                        <span style="font-weight: 700; color: var(--text-primary);">${formatVND(order.total_amount)}</span>
+                    </div>
+                    <div style="display: flex; justify-content: space-between; color: var(--text-secondary);">
+                        <span>Phí vận chuyển:</span>
+                        <span style="font-weight: 700; color: ${order.shipping_fee > 0 ? 'var(--text-primary)' : '#059669'};">
+                            ${order.shipping_fee > 0 ? formatVND(order.shipping_fee) : '0đ (Miễn phí)'}
+                        </span>
+                    </div>
+                    ${order.discount_amount > 0 ? `
+                        <div style="display: flex; justify-content: space-between; color: #065F46;">
+                            <span>Mã giảm giá (${order.coupon_code || 'Voucher'}):</span>
+                            <span style="font-weight: 800;">-${formatVND(order.discount_amount)}</span>
+                        </div>
+                    ` : ''}
+                    <div style="display: flex; justify-content: space-between; align-items: center; padding-top: 8px; margin-top: 4px; border-top: 1px solid var(--divider);">
+                        <span style="font-size: 13.5px; font-weight: 800; color: var(--primary);">Tổng thanh toán:</span>
+                        <span style="font-size: 16px; font-weight: 800; color: var(--price);">${formatVND(order.final_amount)}</span>
+                    </div>
+                    <div style="display: flex; justify-content: space-between; align-items: center; font-size: 11px; margin-top: 6px; padding: 8px 10px; background: #FAF7F2; border-radius: 8px; border: 1px solid rgba(61,35,20,0.05);">
+                        <span>Hình thức: <strong>${order.payment_method === 'BANKING' ? 'Chuyển khoản QR' : 'Thanh toán COD'}</strong></span>
+                        <span style="font-weight: 700; color: ${order.payment_status === 'PAID' ? '#059669' : '#D97706'};">
+                            ${order.payment_status === 'PAID' ? '✓ Đã thanh toán' : '⏳ Chưa thanh toán'}
+                        </span>
+                    </div>
+                </div>
+            </div>
+        `;
+
+        if (footerEl) {
+            let actionsHtml = `
+                <button type="button" onclick="reorderCustomerItems(${order.id})" style="flex: 1; padding: 11px; background: var(--primary); color: #fff; border: none; border-radius: 12px; font-size: 12px; font-weight: 800; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 5px;">
+                    🔁 Mua lại đơn này
+                </button>
+                <button type="button" onclick="chatSupportForOrder('${order.order_code}')" style="flex: 1; padding: 11px; background: #FFFDF9; color: var(--primary); border: 1.5px solid var(--accent); border-radius: 12px; font-size: 12px; font-weight: 800; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 5px;">
+                    💬 Chat hỗ trợ đơn
+                </button>
+            `;
+            if (order.order_status === 'PENDING') {
+                actionsHtml = `
+                    <button type="button" onclick="cancelMyOrder(${order.id})" style="padding: 11px 14px; background: #FEE2E2; color: #991B1B; border: 1px solid #FCA5A5; border-radius: 12px; font-size: 12px; font-weight: 800; cursor: pointer; white-space: nowrap;">
+                        ✕ Hủy đơn
+                    </button>
+                    ` + actionsHtml;
+            }
+            footerEl.innerHTML = actionsHtml;
+        }
+    }
+
+    function closeCustomerOrderDetailModal(e) {
+        if (e && e.target !== e.currentTarget && !e.target.classList.contains('modal-close-btn') && e.target.tagName !== 'BUTTON') return;
+        const modal = document.getElementById('customerOrderDetailModal');
+        if (modal) modal.style.display = 'none';
+    }
+
+    function copyOrderCode(code) {
+        if (navigator.clipboard) {
+            navigator.clipboard.writeText(code).then(() => {
+                showToast('📋 Đã sao chép mã đơn #' + code);
+            }).catch(() => {
+                showToast('Mã đơn: #' + code);
+            });
+        } else {
+            showToast('Mã đơn: #' + code);
+        }
+    }
+
+    async function reorderCustomerItems(orderId) {
+        const order = myOrdersList.find(x => x.id === orderId);
+        if (!order || !order.items || order.items.length === 0) {
+            showToast('Không tìm thấy danh sách sản phẩm để mua lại');
+            return;
+        }
+        showToast('Đang thêm các sản phẩm vào giỏ hàng...');
+        try {
+            for (const it of order.items) {
+                await fetch('/api/cart/add', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': 'Bearer ' + currentToken
+                    },
+                    body: JSON.stringify({ product_id: it.product_id, quantity: it.quantity || 1 })
+                });
+            }
+            showToast('✓ Đã thêm toàn bộ sản phẩm vào giỏ hàng!');
+            closeCustomerOrderDetailModal();
+            switchCustomerTab('cart');
+        } catch (e) {
+            console.error('reorder error:', e);
+            showToast('Lỗi khi thêm lại vào giỏ hàng');
+        }
+    }
+
+    function chatSupportForOrder(orderCode) {
+        closeCustomerOrderDetailModal();
+        switchCustomerTab('chat');
+        setTimeout(() => {
+            const input = document.getElementById('customerChatInput');
+            if (input) {
+                input.value = `Chào Chuyên viên Moccoon, tôi cần tư vấn và hỗ trợ về đơn hàng #${orderCode}.`;
+                input.focus();
+            }
+        }, 350);
     }
 
     async function cancelMyOrder(orderId) {
@@ -7248,6 +7623,7 @@
             const data = await res.json();
             if (data.success) {
                 showToast('Đã hủy đơn hàng thành công!');
+                closeCustomerOrderDetailModal();
                 loadMyOrders();
             } else {
                 alert('Không thể hủy: ' + (data.message || 'Lỗi hủy đơn'));
@@ -7702,10 +8078,23 @@
                 zoomControl: true
             });
 
-            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-                attribution: '© OpenStreetMap contributors',
-                maxZoom: 19
-            }).addTo(addressMap);
+            // Sử dụng Google Maps Tiles chuẩn kết hợp CartoDB Voyager dự phòng (hoạt động 100% trên mọi mạng 4G/Cloudflare/nước ngoài)
+            const googleTiles = L.tileLayer('https://{s}.google.com/vt/lyrs=m&x={x}&y={y}&z={z}', {
+                maxZoom: 20,
+                subdomains: ['mt0', 'mt1', 'mt2', 'mt3'],
+                attribution: '© Google Maps'
+            });
+            googleTiles.on('tileerror', function() {
+                if (!addressMap._hasCartoFallback) {
+                    addressMap._hasCartoFallback = true;
+                    L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', {
+                        attribution: '© CartoDB',
+                        maxZoom: 20,
+                        subdomains: 'abcd'
+                    }).addTo(addressMap);
+                }
+            });
+            googleTiles.addTo(addressMap);
 
             addressMarker = L.marker([defaultLat, defaultLng], {
                 draggable: true
@@ -7734,9 +8123,23 @@
     async function reverseGeocodeLocation(lat, lng) {
         try {
             showToast('Đang tra cứu tên địa chỉ...', 'info');
-            const url = `https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}&zoom=18&addressdetails=1&accept-language=vi`;
-            const res = await fetch(url, { headers: { 'Accept-Language': 'vi' } });
-            const data = await res.json();
+            let data = null;
+            try {
+                const proxyRes = await fetch(`/api/system/reverse-geocode?lat=${lat}&lng=${lng}`);
+                const proxyJson = await proxyRes.json();
+                if (proxyJson && proxyJson.success && proxyJson.data) {
+                    data = proxyJson.data;
+                }
+            } catch (pe) {
+                console.warn('Proxy geocode failed, fallback to client fetch', pe);
+            }
+
+            if (!data) {
+                const url = `https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}&zoom=18&addressdetails=1&accept-language=vi`;
+                const res = await fetch(url, { headers: { 'Accept-Language': 'vi' } });
+                data = await res.json();
+            }
+
             if (data && data.display_name) {
                 const addrInput = document.getElementById('newAddrLine');
                 if (addrInput) {
@@ -7786,9 +8189,22 @@
 
         try {
             showToast(`Đang tìm kiếm "${query}"...`, 'info');
-            const url = `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(query)}&limit=1&accept-language=vi`;
-            const res = await fetch(url, { headers: { 'Accept-Language': 'vi' } });
-            const results = await res.json();
+            let results = null;
+            try {
+                const proxyRes = await fetch(`/api/system/geocode?q=${encodeURIComponent(query)}`);
+                const proxyJson = await proxyRes.json();
+                if (proxyJson && proxyJson.success && Array.isArray(proxyJson.data) && proxyJson.data.length > 0) {
+                    results = proxyJson.data;
+                }
+            } catch (pe) {
+                console.warn('Proxy search failed, fallback to client fetch', pe);
+            }
+
+            if (!results) {
+                const url = `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(query)}&limit=1&accept-language=vi`;
+                const res = await fetch(url, { headers: { 'Accept-Language': 'vi' } });
+                results = await res.json();
+            }
 
             if (results && results.length > 0) {
                 const item = results[0];
@@ -7876,10 +8292,23 @@
                 zoomControl: true
             });
 
-            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-                attribution: '© OpenStreetMap contributors',
-                maxZoom: 19
-            }).addTo(universalMap);
+            // Sử dụng Google Maps Tiles chuẩn kết hợp CartoDB Voyager dự phòng (hoạt động 100% trên mọi mạng 4G/Cloudflare/nước ngoài)
+            const googleTiles = L.tileLayer('https://{s}.google.com/vt/lyrs=m&x={x}&y={y}&z={z}', {
+                maxZoom: 20,
+                subdomains: ['mt0', 'mt1', 'mt2', 'mt3'],
+                attribution: '© Google Maps'
+            });
+            googleTiles.on('tileerror', function() {
+                if (!universalMap._hasCartoFallback) {
+                    universalMap._hasCartoFallback = true;
+                    L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', {
+                        attribution: '© CartoDB',
+                        maxZoom: 20,
+                        subdomains: 'abcd'
+                    }).addTo(universalMap);
+                }
+            });
+            googleTiles.addTo(universalMap);
 
             universalMarker = L.marker([defaultLat, defaultLng], {
                 draggable: true
@@ -7913,9 +8342,23 @@
         if (previewEl) previewEl.innerText = 'Đang tra cứu tên địa chỉ tại vị trí vừa chọn...';
 
         try {
-            const url = `https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}&zoom=18&addressdetails=1&accept-language=vi`;
-            const res = await fetch(url, { headers: { 'Accept-Language': 'vi' } });
-            const data = await res.json();
+            let data = null;
+            try {
+                const proxyRes = await fetch(`/api/system/reverse-geocode?lat=${lat}&lng=${lng}`);
+                const proxyJson = await proxyRes.json();
+                if (proxyJson && proxyJson.success && proxyJson.data) {
+                    data = proxyJson.data;
+                }
+            } catch (pe) {
+                console.warn('Proxy reverse geocode failed, fallback to client fetch', pe);
+            }
+
+            if (!data) {
+                const url = `https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}&zoom=18&addressdetails=1&accept-language=vi`;
+                const res = await fetch(url, { headers: { 'Accept-Language': 'vi' } });
+                data = await res.json();
+            }
+
             if (data && data.display_name) {
                 currentPickedAddressText = data.display_name;
                 if (previewEl) previewEl.innerText = currentPickedAddressText;
@@ -7944,9 +8387,23 @@
 
         showToast(`Đang tìm kiếm "${query}"...`, 'info');
         try {
-            const url = `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(query)}&limit=1&accept-language=vi`;
-            const res = await fetch(url, { headers: { 'Accept-Language': 'vi' } });
-            const results = await res.json();
+            let results = null;
+            try {
+                const proxyRes = await fetch(`/api/system/geocode?q=${encodeURIComponent(query)}`);
+                const proxyJson = await proxyRes.json();
+                if (proxyJson && proxyJson.success && Array.isArray(proxyJson.data) && proxyJson.data.length > 0) {
+                    results = proxyJson.data;
+                }
+            } catch (pe) {
+                console.warn('Proxy geocode search failed, fallback to client fetch', pe);
+            }
+
+            if (!results) {
+                const url = `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(query)}&limit=1&accept-language=vi`;
+                const res = await fetch(url, { headers: { 'Accept-Language': 'vi' } });
+                results = await res.json();
+            }
+
             if (results && results.length > 0) {
                 const item = results[0];
                 const lat = parseFloat(item.lat);

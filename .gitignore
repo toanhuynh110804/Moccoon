@@ -33,6 +33,7 @@ MOCCOON_PACKAGE/
 MOCCOON_BAN_GIAO_HOAN_CHINH/
 **/node_bin/
 node_bin/
+cloudflared.exe
 
 
 # Environment files

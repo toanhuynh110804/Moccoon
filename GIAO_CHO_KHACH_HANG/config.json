@@ -1,5 +1,5 @@
 {
-  "server_url": "http://localhost:5000",
+  "server_url": "https://moccoon-store.loca.lt",
   "app_name": "Moccoon - Dược Mỹ Phẩm Thuần Chay Chuẩn Y Khoa",
-  "description": "Để kết nối tới Server Cloud Online, bạn chỉ cần thay server_url thành địa chỉ link Cloud (ví dụ: https://moccoon-api.onrender.com)"
+  "description": "Địa chỉ máy chủ trực tuyến Moccoon. Khách hàng chỉ việc nhấp đúp file Moccoon.exe là mở app ngay!"
 }

@@ -131,6 +131,76 @@ app.post('/api/system/open-studio', (req, res) => {
     });
 });
 
+// Proxy định vị bản đồ & tra cứu địa chỉ (chống bị chặn CORS/Referrer trên mạng ngoài và di động)
+app.get('/api/system/reverse-geocode', async (req, res) => {
+    const { lat, lng, lon } = req.query;
+    const longitude = lng || lon;
+    if (!lat || !longitude) return res.status(400).json({ success: false, message: 'Thiếu lat/lng' });
+
+    // 1. Thử Nominatim với User-Agent hợp lệ
+    try {
+        const nominatimUrl = `https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${longitude}&zoom=18&addressdetails=1&accept-language=vi`;
+        const response = await fetch(nominatimUrl, {
+            headers: {
+                'User-Agent': 'MoccoonSkincareApp/1.0 (admin@moccoon.vn)',
+                'Accept-Language': 'vi'
+            }
+        });
+        if (response.ok) {
+            const data = await response.json();
+            if (data && data.display_name) {
+                return res.json({ success: true, data });
+            }
+        }
+    } catch (e) {
+        console.warn('[Proxy Reverse Geocode] Nominatim error:', e.message);
+    }
+
+    // 2. Dự phòng: BigDataCloud Reverse Geocoding API (miễn phí, không bao giờ bị chặn)
+    try {
+        const bdcUrl = `https://api.bigdatacloud.net/data/reverse-geocode-client?latitude=${lat}&longitude=${longitude}&localityLanguage=vi`;
+        const bdcRes = await fetch(bdcUrl);
+        if (bdcRes.ok) {
+            const bdcData = await bdcRes.json();
+            const parts = [bdcData.locality, bdcData.city || bdcData.principalSubdivision, bdcData.countryName].filter(Boolean);
+            return res.json({
+                success: true,
+                data: {
+                    display_name: parts.join(', ') || `${lat}, ${longitude}`,
+                    name: bdcData.locality || bdcData.city || 'Vị trí đã chọn'
+                }
+            });
+        }
+    } catch (err) {
+        console.warn('[Proxy Reverse Geocode] BDC error:', err.message);
+    }
+
+    return res.json({ success: true, data: { display_name: `${lat}, ${longitude}` } });
+});
+
+app.get('/api/system/geocode', async (req, res) => {
+    const { q } = req.query;
+    if (!q) return res.status(400).json({ success: false, message: 'Thiếu từ khóa q' });
+
+    try {
+        const url = `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(q)}&limit=5&accept-language=vi`;
+        const response = await fetch(url, {
+            headers: {
+                'User-Agent': 'MoccoonSkincareApp/1.0 (admin@moccoon.vn)',
+                'Accept-Language': 'vi'
+            }
+        });
+        if (response.ok) {
+            const data = await response.json();
+            return res.json({ success: true, data });
+        }
+    } catch (e) {
+        console.warn('[Proxy Geocode] Nominatim search error:', e.message);
+    }
+
+    return res.json({ success: false, data: [] });
+});
+
 // Route 404
 app.use((req, res) => {
     res.status(404).json({
